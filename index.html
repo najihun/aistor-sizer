@@ -1,0 +1,1108 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AIStor Cluster Sizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+  :root{
+    --bg:#f4f3f1;--surface:#ffffff;--surface-2:#efedea;--surface-3:#e7e4e0;
+    --border:#ded9d3;--border-strong:#ccc5bc;--text:#1c1a18;--muted:#6d6862;--faint:#938d85;
+    --accent:#c7264e;--accent-ink:#a11a3d;--accent-weak:rgba(199,38,78,.09);
+    --ok:#1a8f63;--ok-weak:rgba(26,143,99,.12);--warn:#b5791a;--warn-weak:rgba(181,121,26,.14);
+    --drive:#5a86c9;--drive-parity:#c7264e;--logo-ink:#111322;
+    --shadow:0 1px 2px rgba(30,26,22,.05),0 8px 24px -12px rgba(30,26,22,.14);
+    --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+    --sans:'IBM Plex Sans KR','IBM Plex Sans',system-ui,-apple-system,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#17161a;--surface:#211f24;--surface-2:#2a272e;--surface-3:#333039;
+      --border:#3a3742;--border-strong:#4a4652;--text:#efecf0;--muted:#a7a1ad;--faint:#7d7885;
+      --accent:#ff5c81;--accent-ink:#ff85a0;--accent-weak:rgba(255,92,129,.12);
+      --ok:#3ecb95;--ok-weak:rgba(62,203,149,.15);--warn:#e6b45a;--warn-weak:rgba(230,180,90,.16);
+      --drive:#6f9bde;--drive-parity:#ff5c81;--logo-ink:#f2f2f5;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#17161a;--surface:#211f24;--surface-2:#2a272e;--surface-3:#333039;
+    --border:#3a3742;--border-strong:#4a4652;--text:#efecf0;--muted:#a7a1ad;--faint:#7d7885;
+    --accent:#ff5c81;--accent-ink:#ff85a0;--accent-weak:rgba(255,92,129,.12);
+    --ok:#3ecb95;--ok-weak:rgba(62,203,149,.15);--warn:#e6b45a;--warn-weak:rgba(230,180,90,.16);
+    --drive:#6f9bde;--drive-parity:#ff5c81;--logo-ink:#f2f2f5;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1240px;margin:0 auto;padding:28px 22px 64px}
+
+  header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:22px}
+  .brand{display:flex;align-items:center;gap:14px}
+  .aistor-logo{height:30px;width:auto;flex:none;fill:var(--logo-ink)}
+  .brand-sep{width:1px;align-self:stretch;background:var(--border-strong);margin:2px 0}
+  h1{font-size:23px;font-weight:700;margin:0;letter-spacing:-.01em}
+  .hgroup{display:flex;flex-direction:column;align-items:flex-end;gap:9px}
+  .sub{color:var(--muted);font-size:13.5px;max-width:520px;text-align:right}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:500}
+  .langtog{display:inline-flex;background:var(--surface-2);border:1px solid var(--border-strong);border-radius:8px;padding:3px;gap:3px}
+  .langtog button{font-family:var(--mono);font-size:11.5px;font-weight:600;padding:5px 11px;border:0;background:transparent;color:var(--muted);border-radius:5px;cursor:pointer;transition:.12s}
+  .langtog button.active{background:var(--accent);color:#fff}
+
+  .howto{display:flex;align-items:center;flex-wrap:wrap;gap:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 18px;margin-bottom:22px;box-shadow:var(--shadow);font-size:13px;color:var(--muted)}
+  .howto .step{display:inline-flex;align-items:center;gap:7px}
+  .howto .step b{display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:700;flex:none}
+  .howto .arw{color:var(--faint);font-weight:600}
+
+  .app{display:grid;grid-template-columns:340px 1fr;gap:22px;align-items:start}
+  @media (max-width:900px){.app{grid-template-columns:1fr}}
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow)}
+  aside.panel{padding:20px;position:sticky;top:18px}
+  @media (max-width:900px){aside.panel{position:static}}
+
+  .field{margin-bottom:20px}
+  .field:last-child{margin-bottom:0}
+  .label{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--muted);text-transform:uppercase;margin-bottom:9px;gap:8px}
+  .label .hint{font-weight:400;text-transform:none;letter-spacing:0;color:var(--faint);font-size:11.5px;text-align:right}
+
+  .presets{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .presets button{font-family:var(--mono);font-size:13px;font-weight:500;padding:10px 4px;border:1px solid var(--border-strong);background:var(--surface-2);color:var(--text);border-radius:9px;cursor:pointer;transition:.12s}
+  .presets button:hover{border-color:var(--accent);color:var(--accent)}
+  .presets button.active{background:var(--accent);border-color:var(--accent);color:#fff}
+
+  .row{display:flex;gap:8px}
+  .nicrow{display:flex;align-items:center;gap:8px}
+  .niclbl{flex:0 0 96px;font-size:11.5px;color:var(--muted);font-weight:500}
+  .nicrow select{flex:1;min-width:0}
+  .custom{display:flex;gap:8px;margin-top:8px}
+  input[type=number],select{font-family:var(--mono);font-size:13.5px;width:100%;padding:9px 10px;background:var(--surface-2);color:var(--text);border:1px solid var(--border-strong);border-radius:9px}
+  input[type=number]:focus,select:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+
+  .seg{display:flex;background:var(--surface-2);border:1px solid var(--border-strong);border-radius:9px;padding:3px;gap:3px}
+  .seg button{flex:1;font-family:var(--sans);font-size:12.5px;font-weight:500;padding:8px 6px;border:0;background:transparent;color:var(--muted);border-radius:6px;cursor:pointer;transition:.12s}
+  .seg button.active{background:var(--surface);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.12);font-weight:600}
+  .seg.mini button{font-family:var(--mono);font-size:12px;padding:7px 4px}
+  .ecfixed{font-family:var(--mono);font-size:13.5px;font-weight:600;padding:9px 12px;background:var(--surface-2);border:1px solid var(--border-strong);border-radius:9px;color:var(--text)}
+
+  .sliderbox{opacity:.4;pointer-events:none;transition:.15s}
+  .sliderbox.on{opacity:1;pointer-events:auto}
+  .slider-head{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--muted);margin-bottom:6px}
+  .slider-head b{font-family:var(--mono);font-size:15px;color:var(--text);font-weight:600}
+  input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer}
+  .chk{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);cursor:pointer;user-select:none}
+  .chk input{width:16px;height:16px;accent-color:var(--accent);cursor:pointer}
+
+  .results{display:flex;flex-direction:column;gap:16px;min-width:0}
+  .headline{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 22px;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
+  .headline .big{font-family:var(--mono);font-size:40px;font-weight:600;line-height:1;letter-spacing:-.02em}
+  .headline .big span{font-size:20px;color:var(--muted);font-weight:500}
+  .hl-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;font-weight:600}
+  .badge{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding:6px 12px;border-radius:20px;font-family:var(--mono)}
+  .badge.ok{background:var(--ok-weak);color:var(--ok)}
+  .badge.warn{background:var(--warn-weak);color:var(--warn)}
+  .badge .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+  .hl-target{text-align:right}
+  .hl-target .t{font-family:var(--mono);font-size:15px;font-weight:500}
+
+  .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  @media (max-width:1080px){.metrics{grid-template-columns:repeat(2,1fr)}}
+  .metric{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:15px 16px;box-shadow:var(--shadow)}
+  .metric .k{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;font-weight:600}
+  .metric .v{font-family:var(--mono);font-size:26px;font-weight:600;margin-top:7px;letter-spacing:-.01em}
+  .metric .v small{font-size:14px;color:var(--muted);font-weight:500}
+  .metric .note{font-size:11.5px;color:var(--faint);margin-top:3px}
+
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media (max-width:760px){.cols{grid-template-columns:1fr}}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 20px;box-shadow:var(--shadow)}
+  .card h3{font-size:13px;margin:0 0 14px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:8px}
+  .card h3 .ic{color:var(--accent)}
+
+  .spec{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-bottom:1px dashed var(--border);gap:12px}
+  .spec:last-child{border-bottom:0;padding-bottom:0}
+  .spec .sk{font-size:13px;color:var(--muted);flex:none}
+  .spec .sv{font-family:var(--mono);font-size:13.5px;font-weight:500;text-align:right}
+  .spec .sv em{font-style:normal;color:var(--faint);font-size:11.5px}
+
+  .tolgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .tol{background:var(--surface-2);border-radius:10px;padding:14px;text-align:center}
+  .tol .tv{font-family:var(--mono);font-size:30px;font-weight:600;color:var(--ok)}
+  .tol .tk{font-size:11.5px;color:var(--muted);margin-top:2px}
+  .tol.warnz .tv{color:var(--warn)}
+
+  .perfgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  @media (max-width:640px){.perfgrid{grid-template-columns:1fr}}
+  .perf{background:var(--surface-2);border-radius:10px;padding:14px 15px}
+  .perf .pk{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;font-weight:600}
+  .perf .pv{font-family:var(--mono);font-size:25px;font-weight:600;margin-top:6px;letter-spacing:-.01em}
+  .perf .pv small{font-size:13px;color:var(--muted);font-weight:500}
+  .perf .pb{font-size:11px;margin-top:4px;display:inline-flex;align-items:center;gap:5px;font-weight:500}
+  .perf .pb .bd{width:6px;height:6px;border-radius:50%}
+  .perf .pb.net{color:var(--drive)} .perf .pb.net .bd{background:var(--drive)}
+  .perf .pb.drv{color:var(--warn)} .perf .pb.drv .bd{background:var(--warn)}
+
+  .cardhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+  .cardtools{display:flex;gap:6px}
+  .tool{font-family:var(--sans);font-size:12px;font-weight:500;padding:7px 12px;border:1px solid var(--border-strong);background:var(--surface-2);color:var(--text);border-radius:8px;cursor:pointer;transition:.12s}
+  .tool:hover{border-color:var(--accent);color:var(--accent)}
+  .tool:active{transform:translateY(1px)}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:var(--text);color:var(--bg);font-size:13px;font-weight:500;padding:10px 18px;border-radius:22px;opacity:0;pointer-events:none;transition:.2s;z-index:50;box-shadow:var(--shadow)}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  .tablewrap{overflow-x:auto}
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border)}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
+  td.num,th.num{text-align:right;font-family:var(--mono)}
+  tbody tr:last-child td{border-bottom:0}
+  tr.total td{border-top:2px solid var(--border-strong);font-weight:600;background:var(--surface-2)}
+
+  .diagram{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 20px 22px;box-shadow:var(--shadow)}
+  .tabbar{display:inline-flex;gap:4px;background:var(--surface-2);border:1px solid var(--border-strong);border-radius:10px;padding:3px;margin-bottom:14px}
+  .tabbar button{font-family:var(--sans);font-size:12.5px;font-weight:500;padding:8px 16px;border:0;background:transparent;color:var(--muted);border-radius:7px;cursor:pointer;transition:.12s}
+  .tabbar button:hover{color:var(--text)}
+  .tabbar button.active{background:var(--surface);color:var(--text);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+  .tabpane[hidden]{display:none}
+  .ec-cap{font-size:12.5px;color:var(--muted);margin:2px 0 16px;line-height:1.6}
+  .ec-cap b{color:var(--text);font-family:var(--mono)}
+  .quorum{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
+  @media (max-width:640px){.quorum{grid-template-columns:1fr}}
+  .qcard{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:13px 14px}
+  .qcard .qk{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
+  .qcard .qv{font-family:var(--mono);font-size:22px;font-weight:600;margin-top:5px}
+  .qcard .qn{font-size:11px;color:var(--faint);margin-top:3px}
+  .qcard.read .qv{color:var(--ok)} .qcard.write .qv{color:var(--drive)} .qcard.node .qv{color:var(--accent)}
+  .diagwrap{overflow-x:auto;padding-top:6px}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;font-size:12px;color:var(--muted)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+
+  .notes{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 20px}
+  .notes h3{font-size:13px;margin:0 0 12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600}
+  .notes ul{margin:0;padding-left:18px;color:var(--muted);font-size:13px}
+  .notes li{margin-bottom:7px}
+  .notes a{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--accent-weak)}
+  .notes a:hover{border-bottom-color:var(--accent)}
+  .warnrow{display:flex;gap:9px;align-items:flex-start;background:var(--ok-weak);border:1px solid var(--ok);border-radius:10px;padding:11px 13px;font-size:12.5px;color:var(--text);margin-top:2px}
+  .warnrow.hide{display:none}
+  .warnrow .wi{color:var(--ok);flex:none;font-weight:700}
+  .warnrow b{font-family:var(--mono)}
+  .warnrow.amber{background:var(--warn-weak);border-color:var(--warn)}
+  .warnrow.amber .wi{color:var(--warn)}
+
+  footer{margin-top:30px;text-align:center;color:var(--faint);font-size:11.5px;line-height:1.7}
+  .disclaimer{font-size:11px;color:var(--faint);margin-top:10px;padding-left:2px}
+
+  @media print{
+    body{background:#fff}
+    aside.panel,.cardtools,.tabbar,.langtog{display:none}
+    .app{grid-template-columns:1fr;gap:0}
+    .headline,.metric,.card,.diagram,.notes,.warnrow{box-shadow:none;break-inside:avoid}
+  }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <svg class="aistor-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 216 54.4859" role="img" aria-label="MinIO AIStor"><g><rect x="37.5815" y=".2745" width="5.3091" height="15.6785" style="fill:#cf163d;"></rect><path d="M31.1462.4911l-10.7766,6.5815c-.1533.0936-.3462.0936-.4995,0L9.0935.4911c-.2319-.1416-.4984-.2166-.7701-.2166h-.0133c-.8161,0-1.4776.6615-1.4776,1.4776v14.1831h5.3057v-6.7508c0-.4145.4539-.6689.8075-.4526l6.0392,3.6946c.5953.3642,1.3427.3711,1.9446.0181l6.3731-3.738c.3537-.2075.7991.0476.7991.4577v6.7711h5.3057V1.7521c0-.8161-.6615-1.4776-1.4776-1.4776h-.0133c-.2717,0-.5382.0749-.7701.2166Z" style="fill:#cf163d;"></path><path d="M69.3641.2745h-5.3839v7.1363c0,.4004-.4266.6566-.78.4683L49.2464.448c-.2138-.1139-.4523-.1734-.6946-.1734h-.0095c-.8161,0-1.4776.6615-1.4776,1.4776v14.184h5.3413v-7.1282c0-.4.4258-.6562.7792-.4688l14.0089,7.43c.2132.1131.451.1722.6923.1722h0c.8161,0,1.4776-.6615,1.4776-1.4776V.2745Z" style="fill:#cf163d;"></path><path d="M73.5383,15.9531V.2745h2.4434v15.6785h-2.4434Z" style="fill:#cf163d;"></path><path d="M90.3588,16.2327c-6.5717,0-11.2336-3.1174-11.2336-8.1162,0-4.971,4.69-8.1165,11.2336-8.1165s11.2619,3.1174,11.2619,8.1165-4.606,8.1162-11.2619,8.1162ZM90.3588,2.0782c-4.8866,0-8.65,2.1343-8.65,6.0383,0,3.9317,3.7634,6.038,8.65,6.038s8.6781-2.1063,8.6781-6.038c0-3.904-3.7915-6.0383-8.6781-6.0383Z" style="fill:#cf163d;"></path><path d="M55.18,32.9555v-4.0087c0-.9593.7777-1.737,1.737-1.737h9.7098c1.9018,0,2.4207,2.6167.6628,3.3425l-9.7098,4.0087c-1.1434.4721-2.3998-.3685-2.3998-1.6055Z" style="fill:#cf163d;"></path><path d="M31.242,53.9544h8.9229l-14.3878-26.5996h-11.2227L0,53.9544h10.7353l12.4254-5.1844c1.6864-.6962,1.1885-3.2065-.6359-3.2065h-9.5044l7.1245-14.0904,11.0971,22.4813Z"></path><path d="M100.9152,30.2234l-2.4684,5.1642c-3.8724-2.0506-8.8846-3.0757-13.4027-3.0757-4.4807,0-7.0249.8351-7.0249,2.3543,0,1.7465,3.2277,2.278,9.6065,2.7716,8.8467.6835,14.4287,2.62,14.4287,7.9737,0,5.5436-6.2651,9.0745-16.5546,9.0745-7.1386,0-12.6438-1.7844-16.3273-4.8601l3.7971-4.4802c2.8478,2.43,8.1257,3.7588,13.2132,3.7588,4.9359,0,7.9737-1.1771,7.9737-2.8474,0-1.9365-3.5314-2.43-10.4037-2.962-7.4796-.5694-13.631-2.4679-13.631-7.8216,0-4.898,5.7336-8.5052,15.5674-8.5052,5.5436,0,10.8973,1.063,15.2259,3.4551Z"></path><path d="M117.313,53.9545v-21.149h-13.2895v-5.5057h34.1343v5.5057h-13.2895v21.149h-7.5554Z"></path><path d="M178.4393,40.5892c0,8.4294-7.8974,13.8967-19.5541,13.8967-11.6945,0-19.4783-5.4674-19.4783-13.8967,0-8.581,8.049-13.8209,19.4783-13.8209s19.5541,5.24,19.5541,13.8209ZM147.3802,40.5134c0,5.1637,4.6706,8.4673,11.5051,8.4673,6.7965,0,11.3904-3.3035,11.3904-8.4673,0-5.5815-4.6318-8.2015-11.3904-8.2015s-11.5051,2.62-11.5051,8.2015Z"></path><path d="M216,53.9544l-11.3018-9.9859c6.5596,0,10.7347-4.025,10.7347-8.3152,0-4.7464-4.3665-8.3536-14.2387-8.3536h-17.5039v26.6547h7.5938v-21.2631h8.8472c4.8217,0,7.2518,1.0634,7.2518,3.4935,0,2.4679-1.8434,3.9108-6.8555,3.9108h-4.329c-1.0139,0-1.6372.2347-1.923.9134-.2481.5893-.0336,1.2003,1.02,2.3566l10.1661,10.5888h10.5384Z"></path><rect x="43.1269" y="27.3029" width="7.5566" height="26.5997"></rect></g></svg>
+      <span class="brand-sep"></span>
+      <div>
+        <div class="eyebrow">Hardware Sizer</div>
+        <h1 data-i18n="h1">클러스터 하드웨어 사이저</h1>
+      </div>
+    </div>
+    <div class="hgroup">
+      <div class="langtog seg mini" id="langSel">
+        <button data-lang="ko" class="active">KO</button>
+        <button data-lang="en">EN</button>
+      </div>
+      <div class="sub" data-i18n="sub"></div>
+    </div>
+  </header>
+
+  <div class="howto">
+    <span class="step"><b>①</b> <span data-i18n="howto1"></span></span>
+    <span class="arw">→</span>
+    <span class="step"><b>②</b> <span data-i18n="howto2"></span></span>
+    <span class="arw">→</span>
+    <span class="step"><b>③</b> <span data-i18n="howto3"></span></span>
+  </div>
+
+  <div class="app">
+    <aside class="panel">
+      <div class="field">
+        <div class="label"><span data-i18n="cap_title"></span> <span class="hint" id="modeHint"></span></div>
+        <div class="presets" id="presets">
+          <button data-tb="100">100TB</button>
+          <button data-tb="200">200TB</button>
+          <button data-tb="400">400TB</button>
+          <button data-tb="1024">1PB</button>
+        </div>
+        <div class="custom">
+          <input type="number" id="customTB" min="1" step="1" data-i18n-ph="cap_ph">
+          <select id="capUnit" style="width:90px">
+            <option value="1">TB</option>
+            <option value="1024">PB</option>
+          </select>
+        </div>
+        <div style="margin-top:10px">
+          <div class="seg mini" id="targetMode">
+            <button data-m="usable" class="active" data-i18n="seg_usable"></button>
+            <button data-m="raw" data-i18n="seg_raw"></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="label"><span data-i18n="perf_title"></span> <span class="hint" data-i18n="perf_hint"></span></div>
+        <div class="custom">
+          <input type="number" id="perfTarget" min="0" step="1" data-i18n-ph="perf_ph">
+          <span style="align-self:center;font-family:var(--mono);font-size:12px;color:var(--muted)">GB/s</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="label"><span data-i18n="ec_title"></span> <span class="hint" id="ecHint"></span></div>
+        <div class="ecfixed">EC 8:3 <span style="color:var(--faint);font-weight:400">· 63% · <span data-i18n="ec_sym"></span></span></div>
+      </div>
+
+      <div class="field">
+        <div class="label"><span data-i18n="drive_title"></span> <span class="hint" id="driveHint"></span></div>
+        <select id="driveSel"></select>
+      </div>
+
+      <div class="field">
+        <div class="label"><span data-i18n="srv_title"></span> <span class="hint" data-i18n="srv_hint"></span></div>
+        <div class="row">
+          <select id="vendorSel" style="flex:0 0 38%"></select>
+          <select id="modelSel" style="flex:1;min-width:0"></select>
+        </div>
+        <div class="seg mini" id="ffSel" style="margin-top:8px">
+          <button data-ff="e3s" class="active">E3.S · NVMe</button>
+          <button data-ff="lff">LFF · HDD</button>
+        </div>
+        <div class="custom" id="bayCustomWrap" style="display:none">
+          <input type="number" id="bayCustom" min="4" max="200" step="1" data-i18n-ph="bay_ph">
+        </div>
+        <div class="hint" id="bayEcho" style="margin-top:7px;font-family:var(--mono);font-size:11.5px;color:var(--faint)"></div>
+      </div>
+
+      <div class="field">
+        <div class="label"><span data-i18n="nic_title"></span> <span class="hint" data-i18n="nic_hint"></span></div>
+        <div class="nicrow">
+          <span class="niclbl" data-i18n="nic_client"></span>
+          <select id="nicClientSel">
+            <option value="10">10 GbE (1.25 GB/s)</option>
+            <option value="25">25 GbE (3.1 GB/s)</option>
+            <option value="50">50 GbE (6.25 GB/s)</option>
+            <option value="100" selected>100 GbE (12.5 GB/s)</option>
+            <option value="200">200 GbE (25 GB/s)</option>
+            <option value="400">400 GbE (50 GB/s)</option>
+          </select>
+        </div>
+        <div class="nicrow" style="margin-top:8px">
+          <span class="niclbl" data-i18n="nic_internode"></span>
+          <select id="nicInternodeSel">
+            <option value="10">10 GbE (1.25 GB/s)</option>
+            <option value="25">25 GbE (3.1 GB/s)</option>
+            <option value="50">50 GbE (6.25 GB/s)</option>
+            <option value="100" selected>100 GbE (12.5 GB/s)</option>
+            <option value="200">200 GbE (25 GB/s)</option>
+            <option value="400">400 GbE (50 GB/s)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="label"><span data-i18n="cpu_title"></span> <span class="hint" id="cpuHint"></span></div>
+        <select id="cpuSel"></select>
+      </div>
+
+      <div class="field">
+        <div class="label"><span data-i18n="ram_title"></span> <span class="hint" id="ramHint"></span></div>
+        <select id="ramSel">
+          <option value="128">128 GB</option>
+          <option value="256" selected>256 GB</option>
+          <option value="384">384 GB</option>
+          <option value="512">512 GB</option>
+          <option value="768">768 GB</option>
+          <option value="1024">1024 GB (1TB)</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="chk"><input type="checkbox" id="autoChk" checked> <span data-i18n="auto_chk"></span></label>
+        <div class="sliderbox on" id="sliderbox" style="margin-top:14px">
+          <div class="slider-head"><span data-i18n="node_count"></span> <b id="nVal">4</b></div>
+          <div class="seg mini" id="nodeSeg"></div>
+          <div class="slider-head" style="margin-top:14px"><span data-i18n="drives_per"></span> <b id="dVal">4</b> <span id="dStep" style="font-weight:400;color:var(--faint);font-size:11px"></span></div>
+          <input type="range" id="dRange" min="4" max="48" step="1" value="4">
+        </div>
+      </div>
+    </aside>
+
+    <div class="results">
+      <div class="headline">
+        <div>
+          <div class="hl-label" data-i18n="hl_usable"></div>
+          <div class="big"><span id="usableV">—</span></div>
+        </div>
+        <div style="text-align:center">
+          <div class="hl-label" data-i18n="hl_vs"></div>
+          <div class="badge ok" id="metBadge"><span class="dot"></span><span id="metText">—</span></div>
+        </div>
+        <div class="hl-target">
+          <div class="hl-label" data-i18n="hl_target"></div>
+          <div class="t"><span id="targetV">—</span></div>
+          <div class="t" style="color:var(--muted)">RAW <span id="rawV">—</span></div>
+        </div>
+      </div>
+
+      <div class="metrics" id="metrics"></div>
+
+      <div class="cols">
+        <div class="card">
+          <h3><span class="ic">▤</span><span data-i18n="h_nodespec"></span></h3>
+          <div id="nodeSpec"></div>
+        </div>
+        <div class="card">
+          <h3><span class="ic">◆</span><span data-i18n="h_tol"></span></h3>
+          <div class="tolgrid" id="tolGrid"></div>
+          <div class="disclaimer" data-i18n="tol_disc"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3><span class="ic">≣</span><span data-i18n="h_net"></span></h3>
+        <div class="cols" style="gap:20px">
+          <div id="netClient"></div>
+          <div id="netInternode"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="cardhead">
+          <h3 style="margin:0"><span class="ic">⏱</span><span data-i18n="h_perf"></span></h3>
+          <div class="badge ok" id="perfBadge" style="display:none"><span class="dot"></span><span id="perfBadgeText"></span></div>
+        </div>
+        <div class="perfgrid" id="perfGrid"></div>
+        <div class="disclaimer" data-i18n-html="perf_disc"></div>
+      </div>
+
+      <div class="card" id="bomCard">
+        <div class="cardhead">
+          <h3 style="margin:0"><span class="ic">▦</span><span data-i18n="h_bom"></span></h3>
+          <div class="cardtools">
+            <button class="tool" id="copyBom" data-i18n="btn_copy"></button>
+            <button class="tool" id="printBom" data-i18n="btn_print"></button>
+          </div>
+        </div>
+        <div class="tablewrap"><table id="bom"></table></div>
+      </div>
+
+      <div class="diagram">
+        <div class="tabbar" id="diagTabs">
+          <button data-tab="topo" class="active" data-i18n="tab_topo"></button>
+          <button data-tab="ec" data-i18n="tab_ec"></button>
+        </div>
+        <div class="tabpane" id="pane-topo">
+          <div class="diagwrap"><div id="diagram"></div></div>
+          <div class="legend">
+            <span><i style="background:var(--drive)"></i> <span data-i18n="leg_data_drv"></span></span>
+            <span><i style="background:var(--drive-parity)"></i> <span data-i18n="leg_parity"></span></span>
+            <span><i style="background:var(--surface-3)"></i> <span data-i18n="leg_node"></span></span>
+          </div>
+          <div class="disclaimer" data-i18n-html="topo_disc"></div>
+        </div>
+        <div class="tabpane" id="pane-ec" hidden>
+          <div class="ec-cap" id="eccap"></div>
+          <div class="diagwrap"><div id="ecdiagram"></div></div>
+          <div class="legend">
+            <span><i style="background:var(--drive)"></i> <span data-i18n="leg_data"></span></span>
+            <span><i style="background:var(--drive-parity)"></i> <span data-i18n="leg_parity2"></span></span>
+            <span><i style="background:var(--surface-3);border:1px solid var(--border-strong)"></i> <span data-i18n="leg_nodeb"></span></span>
+          </div>
+          <div class="quorum" id="ecquorum"></div>
+          <div class="disclaimer" id="ecnote"></div>
+        </div>
+      </div>
+
+      <div class="warnrow hide" id="warnDivis"><span class="wi">✓</span><span id="warnDivisText"></span></div>
+      <div class="warnrow amber hide" id="bayLimit"><span class="wi">⚠</span><span id="bayLimitText"></span></div>
+      <div class="warnrow amber hide" id="hddWarn"><span class="wi">⚠</span><span id="hddWarnText"></span></div>
+
+      <div class="notes">
+        <h3 data-i18n="notes_h"></h3>
+        <ul>
+          <li data-i18n-html="note1"></li>
+          <li data-i18n-html="note2"></li>
+          <li data-i18n-html="note3"></li>
+          <li data-i18n-html="note4"></li>
+          <li data-i18n-html="note5"></li>
+          <li data-i18n-html="note6"></li>
+          <li data-i18n-html="note7"></li>
+          <li data-i18n-html="note8"></li>
+          <li data-i18n-html="note9"></li>
+        </ul>
+      </div>
+
+      <footer data-i18n-html="footer"></footer>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  var I18N={
+    ko:{
+      doc_title:"AIStor 클러스터 사이저",
+      h1:"클러스터 하드웨어 사이저",
+      sub:"목표 용량을 선택하면 노드 구성 · 스펙 · 내구성 · 네트워크 · BOM · 토폴로지를 자동 산출합니다",
+      howto1:"용량 · EC 선택", howto2:"서버 · 드라이브 · CPU · 메모리 · 네트워크 조정", howto3:"결과 · BOM 확인 후 CSV / PDF 내보내기",
+      cap_title:"목표 용량", mode_usable_hint:"Usable 기준", mode_raw_hint:"Raw 기준", cap_ph:"직접 입력",
+      seg_usable:"Usable(가용)", seg_raw:"Raw(원시)",
+      perf_title:"성능 목표", perf_hint:"읽기 GB/s · 선택", perf_ph:"예: 100 (비우면 용량 기준)",
+      ec_title:"EC 구성", ec_hint:"데이터{data} / 패리티{p}", ec_sym:"완전 대칭",
+      drive_title:"드라이브", drive_hint_nvme:"NVMe (E3.S)", drive_hint_hdd:"HDD · 운영 비권장",
+      srv_title:"서버 (벤더 · 모델)", srv_hint:"베이 자동", bay_ph:"노드당 베이 수 입력",
+      nic_title:"네트워크(NIC)", nic_hint:"2-구간 분리", nic_client:"① LB ↔ 노드", nic_internode:"② 노드 간 통신",
+      cpu_title:"노드당 CPU", cpu_opt:"{s}소켓 · {c}코어",
+      ram_title:"노드당 메모리", ram_hint_min:"최소 256GB 권고", ram_ok:"권장 충족", ram_low:"권장 미만 (256GB+)",
+      os_title:"OS 부팅 드라이브", os_hint:"2× 미러",
+      auto_chk:"노드/드라이브 수 자동 추천", even_chk:"노드당 드라이브 짝수 선호", node_count:"노드 수 (K의 약수)", drives_per:"노드당 드라이브",
+      dstep:"({step} 드라이브 배수, 최대 {bays}베이)",
+      hl_usable:"산출된 Usable 용량", hl_vs:"목표 대비", hl_target:"목표 · RAW",
+      met:"충족 · {pct}%", short:"부족 · {pct}%",
+      m_nodes:"노드 수", m_drives:"노드당 드라이브", m_total:"총 드라이브", m_eff:"EC 효율",
+      note_min4:"최소 4", note_sets:"{sets}× Erasure Set", note_setauto:"Set 자동선택",
+      h_nodespec:"노드당 권장 스펙", h_tol:"내구성 (Fault Tolerance)",
+      tol_disc:"균등 분산(각 Erasure Set을 전 노드에 분배)을 가정한 근사치입니다. 정확한 값은 공식 EC 계산기로 확인하세요.",
+      h_net:"네트워크 구성 (2-구간 권장)", h_perf:"성능 추정 (BOM 기반)", h_bom:"구성 요약 (BOM)",
+      perf_disc:"이론 상한 추정입니다 — 읽기=min(네트워크 N×NIC, 드라이브 합계), 쓰기=min(네트워크, 드라이브×EC효율). 실제 성능은 객체 크기·동시성·튜닝에 좌우되며 <b>WARP 벤치마크</b>로 검증하세요. 드라이브당 가정: NVMe 5.0/2.5 GB/s, HDD 0.25/0.20 GB/s.",
+      btn_copy:"표 복사 (CSV)", btn_print:"인쇄 / PDF",
+      ns_cpu:"CPU", ns_mem:"메모리", ns_drive:"드라이브", ns_bay:"드라이브 베이", ns_os:"OS 드라이브", ns_nic:"NIC", ns_raw:"노드 RAW", ns_conc:"동시 요청/노드",
+      cpu_ok:"적정", cpu_low:"권장 미만", cpu_over:"과다·NW상한 초과",
+      cpu_val:"({status} · 권장 {rc})", ram_val:"({s})", os_val:"2× {cap} NVMe <em>(미러)</em>",
+      drive_val:"{d} × {cap}TB {media} <em>({ff} · JBOD·XFS)</em>",
+      bay_val:"{d} / {bays} <em>({free})</em>", free_avail:"여유 {n}", free_over:"초과 {n}",
+      nic_val:"① LB↔노드 {c} / ② 노드간 {i} GbE <em>(각 ×1)</em>", conc_val:"~{conc} <em>(0.75×RAM/2MiB)</em>",
+      tol_drive:"드라이브 장애 허용<br>(Erasure Set당, 읽기 유지)", tol_node:"노드 장애 허용<br>(전체 유지, 근사)",
+      net_client_h:"① LB ↔ AIStor 노드 구간", net_role:"역할", net_client_role:"클라이언트·App의 S3 API (LB 경유)",
+      net_bw:"노드당 대역폭", net_agg:"집계 처리량(이론)",
+      net_inter_h:"② 노드 간 통신 구간", net_inter_role:"EC 연산·복제·힐링 트래픽", net_fabric:"패브릭",
+      pf_read:"읽기 처리량 (추정)", pf_write:"쓰기 처리량 (추정)", pf_iops:"드라이브 IOPS (4K, 이론)",
+      pf_bn_net:"네트워크 병목", pf_bn_drv:"드라이브 병목", pf_iops_sub:"{media} × {total}개 집계",
+      pf_badge_met:"목표 {t} GB/s · 충족", pf_badge_short:"목표 {t} GB/s · 미달 ({pct}%)",
+      bom_comp:"구성 요소", bom_spec:"사양", bom_pernode:"노드당", bom_total:"클러스터 합계",
+      bom_server:"서버(노드)", bom_custom:"커스텀", unit_node:"{n} 대", suffix_bay:"{n}베이",
+      bom_cpu:"CPU", cpu_total:"{s}소켓 / {c}코어", bom_mem:"메모리",
+      bom_drive:"{media} 드라이브", unit_ea:"{n} 개", bom_os:"OS 드라이브", os_spec:"{cap} NVMe 미러",
+      bom_nic1:"NIC ① 클라이언트", bom_nic2:"NIC ② 노드 간", unit_port:"{n} 포트",
+      bom_raw:"RAW 용량", raw_spec:"{cap}TB급", bom_tp:"처리량 추정", tp_spec:"{media} · 이론 상한", tp_val:"읽기 {r} / 쓰기 {w} GB/s",
+      bom_usable:"Usable 용량",
+      sym:"<b>대칭 구성 확정</b> — {n}개 노드 × {d} 드라이브 = {total}개 (모두 동일). Erasure Set {sets}개(각 {k} 드라이브), 각 노드가 모든 Set에 <b>{m}개</b>씩 기여 → 완전 대칭. 노드 수 N={n}은 K={k}의 약수, 노드당 드라이브는 K/N={m}의 배수입니다.",
+      baylimit:"노드당 {bays}베이를 모두 채워도 목표 용량에 미달합니다. 대칭 구성 상한은 <b>{nmax}노드 × {bays}베이</b>이므로, <b>더 큰 용량의 드라이브</b>를 선택하거나 <b>베이 수가 더 많은 서버 모델</b>을 사용하세요.",
+      hddwarn:"<b>HDD는 운영 환경 비권장</b> — AIStor는 고성능 프라이머리 오브젝트 스토어로, NVMe(E3.S) 권장이며 불가피 시 최소 SSD를 권고합니다. HDD는 낮은 IOPS·지연으로 EC 연산·힐링·S3 처리 병목 및 장애 사례가 보고되었습니다. 고객과 NVMe/SSD 전환을 먼저 협의하세요.",
+      bay_echo:"선택: {srv} → 노드당 {bays} {media} 베이", vendor_custom:"직접 입력", model_custom:"— 직접 입력 —",
+      node_seg:"{n} 노드 <em style='font-style:normal;color:var(--faint)'>·{s}샤드</em>",
+      dg_lb:"로드밸런서 (LB)", dg_lb_sub:"① 클라이언트 · App S3 API", dg_internode:"② 노드 간 통신 네트워크 · {nic}GbE (EC·힐링·복제)",
+      topo_disc:"패리티 색칠은 EC 비율(P/K)만큼을 대표로 표시한 것입니다 — 실제 패리티는 특정 드라이브에 고정되지 않고 <b>객체마다 로테이션되어 전 드라이브에 분산</b>됩니다.",
+      leg_data_drv:"데이터 샤드 드라이브", leg_parity:"패리티 샤드(EC)", leg_node:"노드(서버)",
+      leg_data:"데이터 샤드", leg_parity2:"패리티 샤드", leg_nodeb:"노드 경계",
+      tab_topo:"클러스터 토폴로지", tab_ec:"EC 스트라이프 관점",
+      ec_cap:"<b>Erasure Set</b>은 스트라이핑 단위가 되는 드라이브 묶음(<b>{k}</b>개 드라이브)입니다. 업로드된 각 객체(또는 청크)는 <b>{data}</b>개 데이터 샤드 + <b>{p}</b>개 패리티 샤드 = 총 <b>{k}</b>개 샤드로 인코딩되어, 하나의 Erasure Set을 이루는 {k}개 드라이브에 <b>샤드 1개씩</b> 저장됩니다. 이 Erasure Set은 {n}개 노드에 걸쳐 최대 분산되며 노드당 최다 <b>{spn}</b>개 샤드를 보관합니다. 클러스터 전체는 이런 Erasure Set을 총 <b>{sets}</b>개 보유합니다.",
+      ec_secA:"① EC 인코딩 — 객체 1개 → {k} 샤드 (= 1 Erasure Set 분량)", ec_obj:"객체",
+      ec_data:"데이터 {data}", ec_parity:"패리티 {p}",
+      ec_secB:"② 1개 Erasure Set({k} 드라이브)이 {n}개 노드에 분산 (노드당 최다 {spn}개 샤드)",
+      q_read:"읽기 쿼럼 / 허용 손실", q_need:"샤드 필요", q_read_n:"최대 {p}개 샤드 손실까지 읽기 유지",
+      q_write:"쓰기 쿼럼 / 허용 손실", q_write_n:"최대 {w}개 샤드 손실까지 쓰기 유지",
+      q_node:"노드 장애 허용", q_node_unit:"노드", q_node_n:"Erasure Set당 노드 최다 {spn}샤드 기준(보장값)",
+      ec_note:"EC {ec} = 데이터 {data} / 패리티 {p} (효율 {eff}%). 읽기 쿼럼=데이터 샤드 수, 쓰기 쿼럼=데이터+1. 노드 장애 허용은 각 Erasure Set을 전 노드에 균등 분산한 최악 케이스 보장값입니다.",
+      toast_copied:"BOM CSV 복사됨", toast_copyfail:"복사 실패 — 수동 선택하세요",
+      print_hint:"인쇄가 안 뜨면: 아티팩트를 새 탭에서 열고 브라우저 인쇄(Ctrl/Cmd+P → PDF로 저장)를 사용하세요.",
+      note1:"운영 최소 구성: <b>4노드 × 노드당 4드라이브</b> 이상 (권고).",
+      note2:"CPU: 공식 권고는 <b>1소켓 · 64코어+</b>(최소 8코어)이나, 코어는 <b>네트워크 처리량 상한을 넘으면 낭비</b>입니다. 본 도구는 NIC 연동 권장(25GbE→16 · 100GbE→32 · 200GbE→48 · 400GbE→64코어)을 제시하며, HDD 노드는 드라이브 병목이라 16코어면 충분합니다.",
+      note3:"디스크: <b>NVMe</b> 권장(불가피 시 SSD). HDD 운영은 지속적 장애 사례로 비권장. JBOD + XFS, RAID 미사용.",
+      note4:"<b>드라이브 폼팩터 · 매체</b>: <b>E3.S</b>=NVMe(고밀도 EDSFF), <b>LFF(3.5\")</b>=HDD. E3.S는 NVMe 전용이라 HDD는 꽂을 수 없고, 대용량 HDD는 3.5\"(LFF)에만 들어갑니다. AIStor는 <b>NVMe(E3.S) 권장</b>, HDD는 운영 비권장입니다.",
+      note5:"목록의 값은 각 모델·폼팩터의 <b>대표 최대 베이 수</b>이며, 실제 주문 구성(전면/중간/후면 케이지 등)에 따라 달라질 수 있으니 스펙시트로 확인하거나 \"직접 입력\"을 사용하세요. 노드당 드라이브는 이 베이 수를 넘지 못합니다.",
+      note6:"메모리: 노드당 <b>최소 256GB</b> 권고. 동시처리량 = (0.75 × RAM) / 2MiB.",
+      note7:"네트워크: <b>100GbE 이상</b> 권고, 클라이언트↔LB 구간과 노드 간 통신 구간을 분리 관리.",
+      note8:"EC 8:3 = 데이터5/패리티3(≈63% 가용, <b>기본값</b>), EC 12:4 = 데이터8/패리티4(≈67% 가용). <b>완전 대칭</b>: 노드 수 N은 Erasure Set 크기 K의 약수(N|K), 노드당 드라이브는 K/N의 배수. EC8:3은 N=4 또는 N=8.",
+      note9:"정밀 내구성·가용용량: <a href=\"https://www.min.io/product/erasure-code-calculator\" target=\"_blank\" rel=\"noopener\">MinIO EC 계산기</a> · 네트워크 처리량: <a href=\"https://docs.min.io/aistor/reference/aistor-server/requirements/network/\" target=\"_blank\" rel=\"noopener\">공식 문서</a>",
+      footer:"본 도구는 사전 사이징 가이드용 근사 계산기입니다. 실제 구성은 워크로드(처리량·동시성·객체 크기)에 따라 조정이 필요하며, 확정 견적은 MinIO 세일즈/SE 검토를 권장합니다.<br>출처: docs.min.io · min.io/product/erasure-code-calculator<br><b style=\"color:var(--muted)\">© 2026 MinIO, Inc. 모든 권리 보유.</b> 본 도구 및 콘텐츠에 대한 모든 저작권은 MinIO, Inc.에 있습니다."
+    },
+    en:{
+      doc_title:"AIStor Cluster Sizer",
+      h1:"Cluster Hardware Sizer",
+      sub:"Pick a target capacity and it derives node layout · spec · durability · network · BOM · topology automatically",
+      howto1:"Pick capacity · EC", howto2:"Adjust server · drive · CPU · memory · network", howto3:"Review results · BOM, export CSV / PDF",
+      cap_title:"Target Capacity", mode_usable_hint:"Usable basis", mode_raw_hint:"Raw basis", cap_ph:"Custom",
+      seg_usable:"Usable", seg_raw:"Raw",
+      perf_title:"Performance Target", perf_hint:"Read GB/s · optional", perf_ph:"e.g. 100 (blank = capacity)",
+      ec_title:"Erasure Coding", ec_hint:"Data {data} / Parity {p}", ec_sym:"fully symmetric",
+      drive_title:"Drive", drive_hint_nvme:"NVMe (E3.S)", drive_hint_hdd:"HDD · not recommended",
+      srv_title:"Server (Vendor · Model)", srv_hint:"bays auto", bay_ph:"Bays per node",
+      nic_title:"Network (NIC)", nic_hint:"2-segment", nic_client:"① LB ↔ Nodes", nic_internode:"② Inter-node",
+      cpu_title:"CPU per node", cpu_opt:"{s} socket · {c} cores",
+      ram_title:"Memory per node", ram_hint_min:"256GB min rec.", ram_ok:"meets rec.", ram_low:"below rec. (256GB+)",
+      os_title:"OS Boot Drive", os_hint:"2× mirror",
+      auto_chk:"Auto-recommend nodes / drives", even_chk:"Prefer even drives per node", node_count:"Nodes (divisor of K)", drives_per:"Drives per node",
+      dstep:"(multiple of {step}, max {bays} bays)",
+      hl_usable:"Computed Usable Capacity", hl_vs:"vs Target", hl_target:"Target · RAW",
+      met:"Met · {pct}%", short:"Short · {pct}%",
+      m_nodes:"Nodes", m_drives:"Drives/node", m_total:"Total Drives", m_eff:"EC Efficiency",
+      note_min4:"min 4", note_sets:"{sets}× Erasure Set", note_setauto:"auto set",
+      h_nodespec:"Recommended Node Spec", h_tol:"Fault Tolerance",
+      tol_disc:"Approximate, assuming each Erasure Set is spread evenly across all nodes. Confirm exact values with the official EC calculator.",
+      h_net:"Network (2-segment recommended)", h_perf:"Performance Estimate (from BOM)", h_bom:"Bill of Materials (BOM)",
+      perf_disc:"Theoretical ceiling — read = min(network N×NIC, drive aggregate), write = min(network, drive×EC efficiency). Real performance depends on object size, concurrency and tuning; validate with a <b>WARP benchmark</b>. Per-drive assumptions: NVMe 5.0/2.5 GB/s, HDD 0.25/0.20 GB/s.",
+      btn_copy:"Copy table (CSV)", btn_print:"Print / PDF",
+      ns_cpu:"CPU", ns_mem:"Memory", ns_drive:"Drive", ns_bay:"Drive bays", ns_os:"OS Drive", ns_nic:"NIC", ns_raw:"Node RAW", ns_conc:"Concurrent req/node",
+      cpu_ok:"OK", cpu_low:"below rec.", cpu_over:"over · exceeds NW",
+      cpu_val:"({status} · rec {rc})", ram_val:"({s})", os_val:"2× {cap} NVMe <em>(mirror)</em>",
+      drive_val:"{d} × {cap}TB {media} <em>({ff} · JBOD·XFS)</em>",
+      bay_val:"{d} / {bays} <em>({free})</em>", free_avail:"{n} free", free_over:"{n} over",
+      nic_val:"① LB↔Nodes {c} / ② Inter {i} GbE <em>(×1 each)</em>", conc_val:"~{conc} <em>(0.75×RAM/2MiB)</em>",
+      tol_drive:"Drive failures tolerated<br>(per Erasure Set, read)", tol_node:"Node failures tolerated<br>(cluster, approx)",
+      net_client_h:"① LB ↔ AIStor Nodes segment", net_role:"Role", net_client_role:"Client/App S3 API (via LB)",
+      net_bw:"Bandwidth/node", net_agg:"Aggregate (theoretical)",
+      net_inter_h:"② Inter-node segment", net_inter_role:"EC compute · replication · healing", net_fabric:"Fabric",
+      pf_read:"Read Throughput (est.)", pf_write:"Write Throughput (est.)", pf_iops:"Drive IOPS (4K, theor.)",
+      pf_bn_net:"network-bound", pf_bn_drv:"drive-bound", pf_iops_sub:"{media} × {total} aggregate",
+      pf_badge_met:"Target {t} GB/s · met", pf_badge_short:"Target {t} GB/s · short ({pct}%)",
+      bom_comp:"Component", bom_spec:"Spec", bom_pernode:"Per node", bom_total:"Cluster total",
+      bom_server:"Server (node)", bom_custom:"Custom", unit_node:"{n} units", suffix_bay:"{n} bays",
+      bom_cpu:"CPU", cpu_total:"{s} sockets / {c} cores", bom_mem:"Memory",
+      bom_drive:"{media} Drive", unit_ea:"{n} pcs", bom_os:"OS Drive", os_spec:"{cap} NVMe mirror",
+      bom_nic1:"NIC ① Client", bom_nic2:"NIC ② Inter-node", unit_port:"{n} ports",
+      bom_raw:"RAW Capacity", raw_spec:"{cap}TB class", bom_tp:"Throughput (est.)", tp_spec:"{media} · theoretical", tp_val:"Read {r} / Write {w} GB/s",
+      bom_usable:"Usable Capacity",
+      sym:"<b>Symmetric layout confirmed</b> — {n} nodes × {d} drives = {total} (all identical). {sets} Erasure Sets ({k} drives each); every node contributes <b>{m}</b> to each set → fully symmetric. N={n} divides K={k}; drives/node is a multiple of K/N={m}.",
+      baylimit:"Even fully populating {bays} bays/node falls short of the target. The symmetric ceiling is <b>{nmax} nodes × {bays} bays</b>, so pick a <b>larger-capacity drive</b> or a <b>server model with more bays</b>.",
+      hddwarn:"<b>HDD is not recommended for production</b> — AIStor is a high-performance primary object store; NVMe (E3.S) is recommended, SSD at minimum. HDD's low IOPS/latency cause EC-compute, healing and S3 bottlenecks and have led to reliability issues. Discuss an NVMe/SSD path with the customer first.",
+      bay_echo:"Selected: {srv} → {bays} {media} bays/node", vendor_custom:"Custom", model_custom:"— Custom —",
+      node_seg:"{n} nodes <em style='font-style:normal;color:var(--faint)'>·{s} sh</em>",
+      dg_lb:"Load Balancer (LB)", dg_lb_sub:"① Client · App S3 API", dg_internode:"② Inter-node network · {nic}GbE (EC·healing·repl)",
+      topo_disc:"Parity shading shows a representative P/K share only — real parity is <b>not fixed to specific drives; it rotates per object and spreads across all drives</b>.",
+      leg_data_drv:"Data shard drives", leg_parity:"Parity shards (EC)", leg_node:"Node (server)",
+      leg_data:"Data shard", leg_parity2:"Parity shard", leg_nodeb:"Node boundary",
+      tab_topo:"Cluster Topology", tab_ec:"EC Stripe View",
+      ec_cap:"An <b>Erasure Set</b> is the group of drives that forms one striping unit (<b>{k}</b> drives). Each uploaded object (or chunk) is encoded into <b>{data}</b> data shards + <b>{p}</b> parity shards = <b>{k}</b> shards total, written <b>one shard per drive</b> across the {k} drives of one Erasure Set. The set is spread across {n} nodes, holding at most <b>{spn}</b> shards per node. The cluster holds <b>{sets}</b> such Erasure Sets in total.",
+      ec_secA:"① EC encoding — 1 object → {k} shards (= 1 Erasure Set)", ec_obj:"Object",
+      ec_data:"Data {data}", ec_parity:"Parity {p}",
+      ec_secB:"② One Erasure Set ({k} drives) spread across {n} nodes (≤{spn} shards/node)",
+      q_read:"Read quorum / loss", q_need:"shards", q_read_n:"reads survive up to {p} shard loss",
+      q_write:"Write quorum / loss", q_write_n:"writes survive up to {w} shard loss",
+      q_node:"Node fault tolerance", q_node_unit:"nodes", q_node_n:"guaranteed (≤{spn} shards/node per set)",
+      ec_note:"EC {ec} = Data {data} / Parity {p} (efficiency {eff}%). Read quorum = data shards, write quorum = data+1. Node tolerance is the worst-case guarantee assuming each Erasure Set is spread evenly across all nodes.",
+      toast_copied:"BOM CSV copied", toast_copyfail:"Copy failed — select manually",
+      print_hint:"No print dialog? Open the artifact in its own tab and use browser print (Ctrl/Cmd+P → Save as PDF).",
+      note1:"Minimum production layout: <b>4 nodes × 4 drives/node</b> or more (recommended).",
+      note2:"CPU: official guidance is <b>1 socket · 64+ cores</b> (8 min), but cores beyond the <b>network throughput ceiling are wasted</b>. This tool suggests NIC-linked cores (25GbE→16 · 100GbE→32 · 200GbE→48 · 400GbE→64); HDD nodes are drive-bound so 16 cores suffice.",
+      note3:"Disks: <b>NVMe</b> recommended (SSD if unavoidable). HDD is discouraged for production due to recurring reliability issues. JBOD + XFS, no RAID.",
+      note4:"<b>Form factor · media</b>: <b>E3.S</b>=NVMe (high-density EDSFF), <b>LFF(3.5\")</b>=HDD. E3.S is NVMe-only (no HDD), and high-capacity HDDs fit only in 3.5\"(LFF). AIStor recommends <b>NVMe (E3.S)</b>; HDD is not recommended for production.",
+      note5:"Listed values are each model/form-factor's <b>representative maximum bay count</b> and vary by actual order config (front/mid/rear cages) — verify on the spec sheet or use \"Custom\". Drives/node cannot exceed this bay count.",
+      note6:"Memory: <b>256GB minimum</b> per node recommended. Concurrency = (0.75 × RAM) / 2MiB.",
+      note7:"Network: <b>100GbE+</b> recommended, managing the client↔LB segment and the inter-node segment separately.",
+      note8:"EC 8:3 = data5/parity3 (≈63% usable, <b>default</b>), EC 12:4 = data8/parity4 (≈67%). <b>Fully symmetric</b>: node count N divides Erasure Set size K (N|K), drives/node is a multiple of K/N. EC8:3 → N=4 or N=8.",
+      note9:"Precise durability/usable capacity: <a href=\"https://www.min.io/product/erasure-code-calculator\" target=\"_blank\" rel=\"noopener\">MinIO EC Calculator</a> · Network throughput: <a href=\"https://docs.min.io/aistor/reference/aistor-server/requirements/network/\" target=\"_blank\" rel=\"noopener\">official docs</a>",
+      footer:"A pre-sales sizing guide with approximate figures. Real deployments need tuning for the workload (throughput, concurrency, object size); confirm final quotes with MinIO Sales/SE.<br>Source: docs.min.io · min.io/product/erasure-code-calculator<br><b style=\"color:var(--muted)\">© 2026 MinIO, Inc. All rights reserved.</b> All copyright in this tool and its content belongs to MinIO, Inc."
+    }
+  };
+
+  function t(k,p){
+    var s=(I18N[state.lang]&&I18N[state.lang][k])||I18N.ko[k]||k;
+    if(p) for(var key in p) s=s.replace(new RegExp('\\{'+key+'\\}','g'),p[key]);
+    return s;
+  }
+
+  var NIC_GBPS={10:1.25,25:3.125,50:6.25,100:12.5,200:25,400:50};
+
+  // 대표 최대 베이 수(폼팩터별) — 백플레인/주문 구성에 따라 실제값 상이. lff=3.5"(HDD), e3s=E3.S(NVMe)
+  var SERVERS={
+    'Dell':[
+      {m:'PowerEdge R660 (1U · 16G)',lff:4,e3s:16},
+      {m:'PowerEdge R760 (2U · 16G)',lff:12,e3s:20},
+      {m:'PowerEdge R6625 (1U · 16G AMD)',lff:4,e3s:16},
+      {m:'PowerEdge R7625 (2U · 16G AMD)',lff:12,e3s:20}
+    ],
+    'HPE':[
+      {m:'ProLiant DL360 Gen12 (1U)',lff:4,e3s:20},
+      {m:'ProLiant DL380 Gen12 (2U)',lff:12,e3s:36},
+      {m:'ProLiant DL385 Gen11 (2U · AMD)',lff:12,e3s:24}
+    ],
+    '__custom__':[]
+  };
+  var DRIVES={ e3s:[3.84,7.68,15.36,30.72,61.44], lff:[8,12,16,20,24,30] };
+  // 용량 티어별 기본 구성(APAC 경량, E3.S NVMe) — 선택 시 전체 세팅 후 사용자가 개별 조정
+  var PRESETS={
+    '100':{drive:15.36,nic:25,cpu:'1|16',ram:256},
+    '200':{drive:15.36,nic:50,cpu:'1|32',ram:256},
+    '400':{drive:15.36,nic:100,cpu:'1|32',ram:256},
+    '1024':{drive:30.72,nic:100,cpu:'1|32',ram:512}
+  };
+  var CPU_OPTS=[{v:'1|16',s:1,c:16},{v:'1|32',s:1,c:32},{v:'1|64',s:1,c:64},{v:'2|128',s:2,c:128,x:'2×64'}];
+  var OS_OPTS=[480,960,1920];
+  function ffMedia(ff){ return ff==='e3s'?'NVMe':'HDD'; }
+  function ffLabel(ff){ return ff==='lff'?'LFF(3.5")':'E3.S'; }
+  var PERF={ e3s:{r:5.0,w:2.5,iops:250000}, lff:{r:0.25,w:0.20,iops:200} };
+
+  var state={
+    lang:'ko',
+    targetTB:400, mode:'usable', ec:'8:3', drive:15.36, nicClient:100, nicInternode:100, ram:256, cpuSockets:1, cpuCores:32,
+    vendor:'HPE', model:'ProLiant DL380 Gen12 (2U)', ff:'e3s', bays:36,
+    perfTargetR:0, osDrive:960,
+    auto:true, N:4, D:4
+  };
+
+  // ---------- helpers ----------
+  function ecParams(ec){ if(ec==='8:3') return {K:8,P:3,data:5}; return {K:12,P:4,data:8}; }
+  function fmtCap(tb){
+    if(tb>=1000){var pb=tb/1024; return {n:(pb>=100?pb.toFixed(0):pb.toFixed(pb>=10?1:2)),u:'PB'};}
+    return {n:(tb>=100?tb.toFixed(0):tb.toFixed(tb>=10?0:1)),u:'TB'};
+  }
+  function capStr(tb){var f=fmtCap(tb);return f.n+' '+f.u;}
+  function fmtGB(gb){ return gb>=1024 ? (gb/1024).toFixed(gb%1024===0?0:1)+' TB' : gb+' GB'; }
+  function osStr(gb){ return gb>=1000 ? (gb/1000)+' TB' : gb+' GB'; }
+  function recCores(){ if(state.ff!=='e3s') return 16; return {10:8,25:16,50:24,100:32,200:48,400:64}[state.nicClient]||32; }
+  function cpuStatus(){ var rc=recCores(); if(state.cpuCores<rc) return {t:t('cpu_low'),ok:false}; if(state.cpuCores>rc*2) return {t:t('cpu_over'),ok:false}; return {t:t('cpu_ok'),ok:true}; }
+
+  // 노드 수: K의 약수 중 4 이상이면서 짝수만(무조건 짝수 강제)
+  function validNodeCounts(K){ var out=[]; for(var n=4;n<=K;n++){ if(K%n===0 && n%2===0) out.push(n); } if(out.length===0) out.push(4); return out; }
+  // 드라이브 증분 단위: K/N 배수 ∧ 짝수(=lcm(m,2)) — 노드당 드라이브 무조건 짝수 강제
+  function dStep(m){ return (m%2!==0) ? m*2 : m; }
+  function firstValidD(m){ var s=dStep(m); return Math.ceil(4/s)*s; }
+
+  // 전략: 노드 수 최소 + 노드당 드라이브 밀도 최대 (가장 적은 노드에 드라이브를 채워 목표 충족)
+  function recommend(rawNeededTB, K, driveTB){
+    var bays=state.bays, pd=PERF[state.ff]||PERF.e3s, nic=NIC_GBPS[state.nicClient]||0;
+    var needCap=Math.ceil(rawNeededTB/driveTB), needPerf=0, minN=4;
+    if(state.perfTargetR>0){ needPerf=Math.ceil(state.perfTargetR/pd.r); if(nic>0) minN=Math.max(4,Math.ceil(state.perfTargetR/nic)); }
+    // 1PB(Usable) 이상은 8노드를 기본 전제로 (자동 추천 노드 하한)
+    var usableTarget = state.mode==='usable' ? state.targetTB : state.targetTB*(ecParams(state.ec).data/K);
+    if(usableTarget>=1024) minN=Math.max(minN,8);
+    var need=Math.max(needCap,needPerf);
+    var vs=validNodeCounts(K); // 오름차순
+    // 오름차순 N 중, 베이 한도 내에서 목표를 채울 수 있는 최소 N을 고르고 D는 필요한 최소(짝수/스텝) — 밀도 최대
+    function solve(nodeOk){
+      for(var i=0;i<vs.length;i++){
+        var N=vs[i]; if(!nodeOk(N)) continue;
+        var m=K/N, st=dStep(m), maxD=Math.floor(bays/st)*st, fd=firstValidD(m);
+        if(maxD<fd) continue;
+        if(N*maxD<need) continue;              // 이 노드 수로는 베이 안에서 목표 미달
+        var D=fd; while(N*D<need) D+=st;        // 목표 충족 최소 드라이브(밀도 최대)
+        return {N:N,D:D,total:N*D};
+      }
+      return null;
+    }
+    var best=solve(function(N){return N>=minN;});   // 네트워크 노드 하한 우선
+    if(!best) best=solve(function(){return true;}); // 네트워크 도달 불가 → 하한 무시(성능 카드가 병목 표시)
+    if(!best){                                       // 베이 한도로 용량 미달 → 최대 용량(최다 노드×풀 베이)
+      var N2=vs[vs.length-1], m2=K/N2, st2=dStep(m2), D2=Math.floor(bays/st2)*st2, fd2=firstValidD(m2);
+      if(D2<fd2)D2=fd2; best={N:N2,D:D2,total:N2*D2};
+    }
+    return best;
+  }
+  function snapSymmetric(K){
+    var vs=validNodeCounts(K);
+    if(vs.indexOf(state.N)<0){ var nearest=vs[0], b=Infinity; vs.forEach(function(n){var d=Math.abs(n-state.N); if(d<b){b=d;nearest=n;}}); state.N=nearest; }
+    var m=K/state.N, s=dStep(m), fd=firstValidD(m);
+    var D=Math.round(state.D/s)*s; if(D<fd)D=fd; if(D>state.bays)D=Math.floor(state.bays/s)*s; if(D<fd)D=fd;
+    state.D=D;
+  }
+
+  function compute(){
+    var ep=ecParams(state.ec), eff=ep.data/ep.K;
+    var rawNeeded = state.mode==='usable' ? state.targetTB/eff : state.targetTB;
+    if(state.auto){ var r=recommend(rawNeeded,ep.K,state.drive); state.N=r.N; state.D=r.D; } else { snapSymmetric(ep.K); }
+    var N=state.N, D=state.D, total=N*D, rawTB=total*state.drive, usableTB=rawTB*eff;
+    var m=ep.K/N, sets=total/ep.K, shardsPerNode=Math.ceil(ep.K/N);
+    var nodeTol=Math.floor(ep.P/shardsPerNode); if(nodeTol<0)nodeTol=0;
+    var writeTol=Math.max(0,ep.P-1);
+    var pd=PERF[state.ff]||PERF.e3s, nic=NIC_GBPS[state.nicClient]||0;
+    var netCeil=N*nic, driveRead=total*pd.r, driveWriteEff=total*pd.w*eff;
+    var readTP=Math.min(netCeil,driveRead), writeTP=Math.min(netCeil,driveWriteEff);
+    var readBn=netCeil<=driveRead?'net':'drv', writeBn=netCeil<=driveWriteEff?'net':'drv';
+    var iops=total*pd.iops;
+    return {ep:ep,eff:eff,N:N,D:D,total:total,rawTB:rawTB,m:m,usableTB:usableTB,sets:sets,shardsPerNode:shardsPerNode,
+            driveTol:ep.P,writeTol:writeTol,nodeTol:nodeTol,readTP:readTP,writeTP:writeTP,readBn:readBn,writeBn:writeBn,iops:iops};
+  }
+
+  // ---------- render ----------
+  function render(){
+    var c=compute();
+    var targetUsable = state.mode==='usable'? state.targetTB : state.targetTB*c.eff;
+
+    document.getElementById('usableV').innerHTML=fmtCap(c.usableTB).n+' <span>'+fmtCap(c.usableTB).u+'</span>';
+    document.getElementById('targetV').textContent=capStr(state.targetTB)+' '+(state.mode==='usable'?'Usable':'Raw');
+    document.getElementById('rawV').textContent=capStr(c.rawTB);
+
+    var met=c.usableTB>=targetUsable-0.001, pct=Math.round((c.usableTB/targetUsable)*100);
+    var badge=document.getElementById('metBadge'), mt=document.getElementById('metText');
+    badge.className='badge '+(met?'ok':'warn');
+    mt.textContent=met?t('met',{pct:pct}):t('short',{pct:pct});
+
+    document.getElementById('modeHint').textContent = state.mode==='usable'? t('mode_usable_hint') : t('mode_raw_hint');
+    document.getElementById('ecHint').textContent = t('ec_hint',{data:c.ep.data,p:c.ep.P});
+
+    var mets=[
+      {k:t('m_nodes'),v:c.N,u:'',note:t('note_min4')},
+      {k:t('m_drives'),v:c.D,u:'',note:t('note_min4')},
+      {k:t('m_total'),v:c.total,u:'',note:c.sets?t('note_sets',{sets:c.sets}):t('note_setauto')},
+      {k:t('m_eff'),v:Math.round(c.eff*100),u:'%',note:'D'+c.ep.data+'/P'+c.ep.P}
+    ];
+    document.getElementById('metrics').innerHTML=mets.map(function(x){
+      return '<div class="metric"><div class="k">'+x.k+'</div><div class="v">'+x.v+'<small>'+x.u+'</small></div><div class="note">'+x.note+'</div></div>';
+    }).join('');
+
+    var conc=Math.floor(0.75*state.ram*1024/2).toLocaleString();
+    var bayFree=state.bays-c.D, cs=cpuStatus(), rc=recCores(), ramOk=state.ram>=256;
+    var freeTxt = bayFree>=0 ? t('free_avail',{n:bayFree}) : t('free_over',{n:-bayFree});
+    document.getElementById('nodeSpec').innerHTML=[
+      [t('ns_cpu'), t('cpu_opt',{s:state.cpuSockets,c:state.cpuCores})+' <em>'+t('cpu_val',{status:cs.t,rc:rc})+'</em>'],
+      [t('ns_mem'), state.ram+' GB <em>'+t('ram_val',{s:ramOk?t('ram_ok'):t('ram_low')})+'</em>'],
+      [t('ns_drive'), t('drive_val',{d:c.D,cap:state.drive,media:ffMedia(state.ff),ff:ffLabel(state.ff)})],
+      [t('ns_bay'), t('bay_val',{d:c.D,bays:state.bays,free:freeTxt})],
+      [t('ns_os'), t('os_val',{cap:osStr(state.osDrive)})],
+      [t('ns_nic'), t('nic_val',{c:state.nicClient,i:state.nicInternode})],
+      [t('ns_raw'), capStr(c.D*state.drive)],
+      [t('ns_conc'), t('conc_val',{conc:conc})]
+    ].map(function(s){return '<div class="spec"><span class="sk">'+s[0]+'</span><span class="sv">'+s[1]+'</span></div>';}).join('');
+    document.getElementById('cpuHint').textContent=t('cpu_val',{status:cs.t,rc:rc}).replace(/^\(|\)$/g,'');
+    document.getElementById('ramHint').textContent=ramOk?t('ram_ok'):t('ram_low');
+
+    document.getElementById('tolGrid').innerHTML=
+      '<div class="tol"><div class="tv">'+c.driveTol+'</div><div class="tk">'+t('tol_drive')+'</div></div>'+
+      '<div class="tol'+(c.nodeTol<1?' warnz':'')+'"><div class="tv">'+c.nodeTol+'</div><div class="tk">'+t('tol_node')+'</div></div>';
+
+    var perNodeC=NIC_GBPS[state.nicClient]||0, aggC=perNodeC*c.N, perNodeI=NIC_GBPS[state.nicInternode]||0;
+    function sp(k,v,head){return '<div class="spec"'+(head?' style="border-bottom:2px solid var(--border-strong)"':'')+'><span class="sk"'+(head?' style="font-weight:600;color:var(--text)"':'')+'>'+k+'</span><span class="sv">'+v+'</span></div>';}
+    document.getElementById('netClient').innerHTML=
+      sp(t('net_client_h'),'',true)+sp(t('net_role'),t('net_client_role'))+
+      sp(t('net_bw'),state.nicClient+' GbE ≈ '+perNodeC+' GB/s')+sp(t('net_agg'),'~'+aggC.toFixed(1)+' GB/s');
+    document.getElementById('netInternode').innerHTML=
+      sp(t('net_inter_h'),'',true)+sp(t('net_role'),t('net_inter_role'))+
+      sp(t('net_bw'),state.nicInternode+' GbE ≈ '+perNodeI+' GB/s')+sp(t('net_fabric'),'Ethernet / RDMA(IB·RoCE)');
+
+    function bn(x){return x==='net'?'<span class="pb net"><span class="bd"></span>'+t('pf_bn_net')+'</span>':'<span class="pb drv"><span class="bd"></span>'+t('pf_bn_drv')+'</span>';}
+    function gb(v){return v>=100?v.toFixed(0):v.toFixed(1);}
+    var iopsStr = c.iops>=1e6 ? (c.iops/1e6).toFixed(1)+'M' : Math.round(c.iops/1000)+'K';
+    document.getElementById('perfGrid').innerHTML=
+      '<div class="perf"><div class="pk">'+t('pf_read')+'</div><div class="pv">'+gb(c.readTP)+' <small>GB/s</small></div><div>'+bn(c.readBn)+'</div></div>'+
+      '<div class="perf"><div class="pk">'+t('pf_write')+'</div><div class="pv">'+gb(c.writeTP)+' <small>GB/s</small></div><div>'+bn(c.writeBn)+'</div></div>'+
+      '<div class="perf"><div class="pk">'+t('pf_iops')+'</div><div class="pv">'+iopsStr+' <small>IOPS</small></div><div style="font-size:11px;color:var(--faint);margin-top:4px">'+t('pf_iops_sub',{media:ffMedia(state.ff),total:c.total})+'</div></div>';
+
+    var pBadge=document.getElementById('perfBadge');
+    if(state.perfTargetR>0){
+      pBadge.style.display='inline-flex';
+      var pmet=c.readTP>=state.perfTargetR-0.01;
+      pBadge.className='badge '+(pmet?'ok':'warn');
+      document.getElementById('perfBadgeText').textContent=pmet?t('pf_badge_met',{t:state.perfTargetR}):t('pf_badge_short',{t:state.perfTargetR,pct:Math.round(c.readTP/state.perfTargetR*100)});
+    } else pBadge.style.display='none';
+
+    var isCustom = state.vendor==='__custom__';
+    var srvSpec = (isCustom?t('bom_custom'):state.vendor+' '+state.model)+' · '+(isCustom?'':ffLabel(state.ff)+' ')+t('suffix_bay',{n:state.bays});
+    function brow(a,b,cc,d){return '<tr><td>'+a+'</td><td style="color:var(--muted)">'+b+'</td><td class="num">'+cc+'</td><td class="num">'+d+'</td></tr>';}
+    document.getElementById('bom').innerHTML=
+      '<thead><tr><th>'+t('bom_comp')+'</th><th>'+t('bom_spec')+'</th><th class="num">'+t('bom_pernode')+'</th><th class="num">'+t('bom_total')+'</th></tr></thead><tbody>'+
+      brow(t('bom_server'),srvSpec,'1',t('unit_node',{n:c.N}))+
+      brow(t('bom_cpu'),t('cpu_opt',{s:state.cpuSockets,c:state.cpuCores}),'1',t('cpu_total',{s:c.N*state.cpuSockets,c:c.N*state.cpuCores}))+
+      brow(t('bom_mem'),state.ram+'GB','1',fmtGB(c.N*state.ram))+
+      brow(t('bom_drive',{media:ffMedia(state.ff)}),state.drive+'TB · '+ffLabel(state.ff),'×'+c.D,t('unit_ea',{n:c.total}))+
+      brow(t('bom_os'),t('os_spec',{cap:osStr(state.osDrive)}),'×2',t('unit_ea',{n:c.N*2}))+
+      brow(t('bom_nic1'),state.nicClient+'GbE','×1',t('unit_port',{n:c.N}))+
+      brow(t('bom_nic2'),state.nicInternode+'GbE','×1',t('unit_port',{n:c.N}))+
+      brow(t('bom_raw'),t('raw_spec',{cap:state.drive}),capStr(c.D*state.drive),capStr(c.rawTB))+
+      brow(t('bom_tp'),t('tp_spec',{media:ffMedia(state.ff)}),'—',t('tp_val',{r:gb(c.readTP),w:gb(c.writeTP)}))+
+      '<tr class="total"><td>'+t('bom_usable')+'</td><td>EC '+state.ec+'</td><td class="num">—</td><td class="num">'+capStr(c.usableTB)+'</td></tr>'+
+      '</tbody>';
+
+    var wd=document.getElementById('warnDivis'); wd.classList.remove('hide');
+    document.getElementById('warnDivisText').innerHTML=t('sym',{n:c.N,d:c.D,total:c.total,sets:c.sets,k:c.ep.K,m:c.m});
+
+    buildNodeSeg(c);
+    document.getElementById('nVal').textContent=c.N;
+    document.getElementById('dVal').textContent=c.D;
+    var dr=document.getElementById('dRange'), st=dStep(c.m);
+    dr.step=st; dr.min=firstValidD(c.m); dr.max=Math.floor(state.bays/st)*st; dr.value=c.D;
+    document.getElementById('dStep').textContent=t('dstep',{step:st,bays:state.bays});
+
+    var media=ffMedia(state.ff);
+    var srv = isCustom ? t('vendor_custom') : (state.vendor+' · '+state.model);
+    document.getElementById('bayEcho').textContent=t('bay_echo',{srv:srv+(isCustom?'':' · '+ffLabel(state.ff)),bays:state.bays,media:media});
+
+    var hw=document.getElementById('hddWarn');
+    if(media==='HDD'){ hw.classList.remove('hide'); document.getElementById('hddWarnText').innerHTML=t('hddwarn'); } else hw.classList.add('hide');
+
+    var bl=document.getElementById('bayLimit');
+    if(!met && c.D>=Math.floor(state.bays/c.m)*c.m){
+      bl.classList.remove('hide');
+      var Nmax=validNodeCounts(c.ep.K).slice(-1)[0];
+      document.getElementById('bayLimitText').innerHTML=t('baylimit',{bays:state.bays,nmax:Nmax});
+    } else bl.classList.add('hide');
+
+    drawDiagram(c); drawEC(c);
+  }
+
+  function buildNodeSeg(c){
+    var vs=validNodeCounts(c.ep.K);
+    document.getElementById('nodeSeg').innerHTML=vs.map(function(n){
+      return '<button data-n="'+n+'"'+(n===c.N?' class="active"':'')+'>'+t('node_seg',{n:n,s:c.ep.K/n})+'</button>';
+    }).join('');
+  }
+
+  // ---------- topology diagram ----------
+  function drawDiagram(c){
+    var N=c.N, D=c.D;
+    var perRow=Math.min(N, N<=4?N:(N<=6?N:(N<=8?4:5))), rows=Math.ceil(N/perRow);
+    var dCols=Math.min(D,8), shownDrives=Math.min(D,16), dRows=Math.ceil(shownDrives/dCols);
+    var cell=15, cgap=3, pad=12, headH=42;
+    var nodeW=pad*2 + dCols*cell + (dCols-1)*cgap; if(nodeW<150)nodeW=150;
+    var innerW=dCols*cell+(dCols-1)*cgap, driveAreaX=pad+(nodeW-pad*2-innerW)/2;
+    var nodeH=headH + dRows*cell + (dRows-1)*cgap + pad + 12;
+    var ngap=18, marginX=16, lbH=40, netH=30, gapV=26;
+    var gridW=perRow*nodeW+(perRow-1)*ngap, W=Math.max(gridW+marginX*2,520);
+    var nodesTop=lbH+gapV+30, nodesBlockH=rows*nodeH+(rows-1)*ngap, H=nodesTop+nodesBlockH+gapV+netH+10;
+    var s='<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" xmlns="http://www.w3.org/2000/svg" font-family="var(--sans)">';
+    s+='<defs><marker id="ah" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="var(--faint)"/></marker></defs>';
+    var lbW=Math.min(gridW,360), lbX=(W-lbW)/2;
+    s+='<rect x="'+lbX+'" y="6" width="'+lbW+'" height="'+lbH+'" rx="9" fill="var(--accent-weak)" stroke="var(--accent)" stroke-width="1.2"/>';
+    s+='<text x="'+(W/2)+'" y="'+(6+lbH/2-2)+'" text-anchor="middle" font-size="13" font-weight="600" fill="var(--accent)">'+t('dg_lb')+'</text>';
+    s+='<text x="'+(W/2)+'" y="'+(6+lbH/2+13)+'" text-anchor="middle" font-size="10.5" fill="var(--muted)">'+t('dg_lb_sub')+'</text>';
+    s+='<line x1="'+(W/2)+'" y1="'+(6+lbH)+'" x2="'+(W/2)+'" y2="'+(nodesTop-8)+'" stroke="var(--faint)" stroke-width="1.4" marker-end="url(#ah)"/>';
+    for(var i=0;i<N;i++){
+      var r=Math.floor(i/perRow), col=i%perRow;
+      var rowCount=(r===rows-1)?(N-perRow*r):perRow, rowW=rowCount*nodeW+(rowCount-1)*ngap, rowX=(W-rowW)/2;
+      var nx=rowX+col*(nodeW+ngap), ny=nodesTop+r*(nodeH+ngap);
+      s+='<rect x="'+nx+'" y="'+ny+'" width="'+nodeW+'" height="'+nodeH+'" rx="10" fill="var(--surface-3)" stroke="var(--border-strong)" stroke-width="1"/>';
+      s+='<text x="'+(nx+pad)+'" y="'+(ny+20)+'" font-size="12.5" font-weight="700" fill="var(--text)">Node '+(i+1)+'</text>';
+      s+='<text x="'+(nx+pad)+'" y="'+(ny+34)+'" font-size="9.5" fill="var(--muted)">'+state.cpuCores+'c · '+state.ram+'GB · '+state.nicClient+'GbE</text>';
+      var parityShown=Math.round(shownDrives*c.ep.P/c.ep.K);
+      for(var d=0;d<shownDrives;d++){
+        var drr=Math.floor(d/dCols), dc=d%dCols, dx=nx+driveAreaX+dc*(cell+cgap), dy=ny+headH+drr*(cell+cgap);
+        var isParity = d >= (shownDrives - parityShown), fill = isParity? 'var(--drive-parity)':'var(--drive)';
+        s+='<rect x="'+dx+'" y="'+dy+'" width="'+cell+'" height="'+cell+'" rx="2.5" fill="'+fill+'" opacity="0.9"/>';
+      }
+      if(D>shownDrives) s+='<text x="'+(nx+nodeW-pad)+'" y="'+(ny+nodeH-8)+'" text-anchor="end" font-size="9.5" fill="var(--muted)">+'+(D-shownDrives)+' more</text>';
+    }
+    var netY=nodesTop+nodesBlockH+gapV, netW=Math.min(gridW,520), netX=(W-netW)/2;
+    s+='<rect x="'+netX+'" y="'+netY+'" width="'+netW+'" height="'+netH+'" rx="8" fill="var(--surface-2)" stroke="var(--border-strong)" stroke-dasharray="4 3"/>';
+    s+='<text x="'+(W/2)+'" y="'+(netY+netH/2+4)+'" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--muted)">'+t('dg_internode',{nic:state.nicInternode})+'</text>';
+    s+='</svg>';
+    document.getElementById('diagram').innerHTML=s;
+  }
+
+  // ---------- EC diagram ----------
+  function drawEC(c){
+    var K=c.ep.K, data=c.ep.data, P=c.ep.P, N=c.N, spn=c.shardsPerNode;
+    document.getElementById('eccap').innerHTML=t('ec_cap',{k:K,data:data,p:P,n:N,spn:spn,sets:(c.sets||'—')});
+    var sq=30, gap=8, pad=18, rowW=K*sq+(K-1)*gap, objW=64, arrowW=44, aStartX=pad, objY=54, rowX=aStartX+objW+arrowW;
+    var W=Math.max(rowX+rowW+pad,560);
+    var colGap=14, maxPerNode=spn, colW=sq+16, distRowW=N*colW+(N-1)*colGap;
+    W=Math.max(W,pad*2+distRowW);
+    var secBY=objY+sq+70, colTop=secBY+58, colBodyH=maxPerNode*(sq+gap)+8, H=colTop+colBodyH+24;
+    var s='<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" xmlns="http://www.w3.org/2000/svg" font-family="var(--sans)">';
+    s+='<defs><marker id="ah2" markerWidth="9" markerHeight="9" refX="5" refY="4.5" orient="auto"><path d="M0 0 L9 4.5 L0 9 z" fill="var(--faint)"/></marker></defs>';
+    s+='<text x="'+pad+'" y="26" font-size="12" font-weight="700" fill="var(--text)">'+t('ec_secA',{k:K})+'</text>';
+    s+='<rect x="'+aStartX+'" y="'+objY+'" width="'+objW+'" height="'+sq+'" rx="6" fill="var(--surface-3)" stroke="var(--border-strong)"/>';
+    s+='<text x="'+(aStartX+objW/2)+'" y="'+(objY+sq/2+4)+'" text-anchor="middle" font-size="11" font-weight="600" fill="var(--text)">'+t('ec_obj')+'</text>';
+    s+='<line x1="'+(aStartX+objW+8)+'" y1="'+(objY+sq/2)+'" x2="'+(rowX-6)+'" y2="'+(objY+sq/2)+'" stroke="var(--faint)" stroke-width="1.6" marker-end="url(#ah2)"/>';
+    s+='<text x="'+(aStartX+objW+arrowW/2)+'" y="'+(objY-6)+'" text-anchor="middle" font-size="9.5" fill="var(--muted)">split+encode</text>';
+    for(var i=0;i<K;i++){
+      var isP=i>=data, x=rowX+i*(sq+gap);
+      s+='<rect x="'+x+'" y="'+objY+'" width="'+sq+'" height="'+sq+'" rx="5" fill="'+(isP?'var(--drive-parity)':'var(--drive)')+'" opacity="0.92"/>';
+      s+='<text x="'+(x+sq/2)+'" y="'+(objY+sq/2+4)+'" text-anchor="middle" font-size="10" font-weight="600" fill="#fff">'+(isP?'P'+(i-data+1):'D'+(i+1))+'</text>';
+    }
+    var dEndX=rowX+data*sq+(data-1)*gap;
+    s+='<line x1="'+rowX+'" y1="'+(objY+sq+9)+'" x2="'+dEndX+'" y2="'+(objY+sq+9)+'" stroke="var(--drive)" stroke-width="1.4"/>';
+    s+='<text x="'+((rowX+dEndX)/2)+'" y="'+(objY+sq+23)+'" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--drive)">'+t('ec_data',{data:data})+'</text>';
+    var pStartX=rowX+data*(sq+gap), pEndX=rowX+rowW;
+    s+='<line x1="'+pStartX+'" y1="'+(objY+sq+9)+'" x2="'+pEndX+'" y2="'+(objY+sq+9)+'" stroke="var(--drive-parity)" stroke-width="1.4"/>';
+    s+='<text x="'+((pStartX+pEndX)/2)+'" y="'+(objY+sq+23)+'" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--drive-parity)">'+t('ec_parity',{p:P})+'</text>';
+    s+='<text x="'+pad+'" y="'+(secBY+18)+'" font-size="12" font-weight="700" fill="var(--text)">'+t('ec_secB',{k:K,n:N,spn:spn})+'</text>';
+    var distX=(W-distRowW)/2; if(distX<pad)distX=pad;
+    for(var n2=0;n2<N;n2++){
+      var cx=distX+n2*(colW+colGap);
+      s+='<rect x="'+cx+'" y="'+colTop+'" width="'+colW+'" height="'+colBodyH+'" rx="8" fill="var(--surface-2)" stroke="var(--border-strong)"/>';
+      s+='<text x="'+(cx+colW/2)+'" y="'+(colTop-8)+'" text-anchor="middle" font-size="10" font-weight="600" fill="var(--muted)">Node '+(n2+1)+'</text>';
+    }
+    var slot=[]; for(var n3=0;n3<N;n3++)slot.push(0);
+    for(var kk=0;kk<K;kk++){
+      var node=kk%N, cx2=distX+node*(colW+colGap), sy=colTop+4+slot[node]*(sq+gap), isP2=kk>=data;
+      s+='<rect x="'+(cx2+(colW-sq)/2)+'" y="'+sy+'" width="'+sq+'" height="'+sq+'" rx="5" fill="'+(isP2?'var(--drive-parity)':'var(--drive)')+'" opacity="0.92"/>';
+      s+='<text x="'+(cx2+colW/2)+'" y="'+(sy+sq/2+4)+'" text-anchor="middle" font-size="9.5" font-weight="600" fill="#fff">'+(isP2?'P'+(kk-data+1):'D'+(kk+1))+'</text>';
+      slot[node]++;
+    }
+    s+='</svg>';
+    document.getElementById('ecdiagram').innerHTML=s;
+    document.getElementById('ecquorum').innerHTML=
+      '<div class="qcard read"><div class="qk">'+t('q_read')+'</div><div class="qv">'+data+' <span style="font-size:13px;color:var(--muted)">'+t('q_need')+'</span></div><div class="qn">'+t('q_read_n',{p:P})+'</div></div>'+
+      '<div class="qcard write"><div class="qk">'+t('q_write')+'</div><div class="qv">'+(data+1)+' <span style="font-size:13px;color:var(--muted)">'+t('q_need')+'</span></div><div class="qn">'+t('q_write_n',{w:c.writeTol})+'</div></div>'+
+      '<div class="qcard node"><div class="qk">'+t('q_node')+'</div><div class="qv">'+c.nodeTol+' <span style="font-size:13px;color:var(--muted)">'+t('q_node_unit')+'</span></div><div class="qn">'+t('q_node_n',{spn:spn})+'</div></div>';
+    document.getElementById('ecnote').textContent=t('ec_note',{ec:state.ec,data:data,p:P,eff:Math.round(c.eff*100)});
+  }
+
+  // ---------- static i18n + option builders ----------
+  function buildCpuOptions(){
+    document.getElementById('cpuSel').innerHTML=CPU_OPTS.map(function(o){
+      var lab=t('cpu_opt',{s:o.s,c:o.c})+(o.x?' ('+o.x+')':'');
+      return '<option value="'+o.v+'"'+(o.v===(state.cpuSockets+'|'+state.cpuCores)?' selected':'')+'>'+lab+'</option>';
+    }).join('');
+  }
+  function applyStatic(){
+    document.title=t('doc_title');
+    document.querySelectorAll('[data-i18n]').forEach(function(el){ el.textContent=t(el.getAttribute('data-i18n')); });
+    document.querySelectorAll('[data-i18n-html]').forEach(function(el){ el.innerHTML=t(el.getAttribute('data-i18n-html')); });
+    document.querySelectorAll('[data-i18n-ph]').forEach(function(el){ el.setAttribute('placeholder',t(el.getAttribute('data-i18n-ph'))); });
+    buildCpuOptions();
+  }
+
+  // ---------- events ----------
+  function setActive(container,attr,val){ container.querySelectorAll('button').forEach(function(b){ b.classList.toggle('active', b.getAttribute(attr)===String(val)); }); }
+
+  document.getElementById('langSel').addEventListener('click',function(e){
+    var b=e.target.closest('button'); if(!b)return;
+    state.lang=b.getAttribute('data-lang');
+    setActive(this,'data-lang',state.lang);
+    applyStatic(); populateVendors(); populateModels(); populateDrives(); render();
+  });
+
+  var presets=document.getElementById('presets');
+  presets.addEventListener('click',function(e){
+    var b=e.target.closest('button'); if(!b)return;
+    applyPreset(parseFloat(b.getAttribute('data-tb')));
+    setActive(presets,'data-tb',state.targetTB); render();
+  });
+  document.getElementById('customTB').addEventListener('input',function(){
+    var v=parseFloat(this.value); if(isNaN(v)||v<=0)return;
+    state.targetTB=v*parseFloat(document.getElementById('capUnit').value);
+    presets.querySelectorAll('button').forEach(function(b){b.classList.remove('active');}); render();
+  });
+  document.getElementById('capUnit').addEventListener('change',function(){
+    var v=parseFloat(document.getElementById('customTB').value);
+    if(!isNaN(v)&&v>0){state.targetTB=v*parseFloat(this.value);render();}
+  });
+  document.getElementById('targetMode').addEventListener('click',function(e){
+    var b=e.target.closest('button'); if(!b)return;
+    state.mode=b.getAttribute('data-m'); setActive(this,'data-m',state.mode); render();
+  });
+  document.getElementById('driveSel').addEventListener('change',function(){state.drive=parseFloat(this.value);render();});
+  document.getElementById('nicClientSel').addEventListener('change',function(){state.nicClient=parseInt(this.value);render();});
+  document.getElementById('nicInternodeSel').addEventListener('change',function(){state.nicInternode=parseInt(this.value);render();});
+  document.getElementById('ramSel').addEventListener('change',function(){state.ram=parseInt(this.value);render();});
+  document.getElementById('cpuSel').addEventListener('change',function(){var p=this.value.split('|');state.cpuSockets=parseInt(p[0]);state.cpuCores=parseInt(p[1]);render();});
+  document.getElementById('perfTarget').addEventListener('input',function(){var v=parseFloat(this.value);state.perfTargetR=(!isNaN(v)&&v>0)?v:0;render();});
+
+  var vendorSel=document.getElementById('vendorSel'), modelSel=document.getElementById('modelSel'), ffSel=document.getElementById('ffSel'), bayCustomWrap=document.getElementById('bayCustomWrap');
+  function currentModel(){ var l=SERVERS[state.vendor]||[]; for(var i=0;i<l.length;i++) if(l[i].m===state.model) return l[i]; return null; }
+  function applyBays(){ if(state.vendor==='__custom__'){ var v=parseInt(document.getElementById('bayCustom').value); if(v>=4)state.bays=v; return; } var cm=currentModel(); if(cm) state.bays=cm[state.ff]||cm.e3s; }
+  function populateDrives(){
+    var list=DRIVES[state.ff]||DRIVES.e3s;
+    if(list.indexOf(state.drive)<0) state.drive=list[Math.min(2,list.length-1)];
+    var media=ffMedia(state.ff);
+    document.getElementById('driveSel').innerHTML=list.map(function(x){ return '<option value="'+x+'"'+(x===state.drive?' selected':'')+'>'+x+' TB '+media+'</option>'; }).join('');
+    document.getElementById('driveHint').textContent=(media==='NVMe'?t('drive_hint_nvme'):t('drive_hint_hdd'));
+  }
+  function applyPreset(tb){
+    var p=PRESETS[String(tb)]; state.targetTB=tb;
+    if(!p) return;
+    state.ff='e3s'; state.drive=p.drive;
+    state.nicClient=p.nic; state.nicInternode=p.nic;
+    var cp=p.cpu.split('|'); state.cpuSockets=parseInt(cp[0]); state.cpuCores=parseInt(cp[1]);
+    state.ram=p.ram; state.auto=true; state.perfTargetR=0;
+    document.getElementById('customTB').value=''; document.getElementById('perfTarget').value='';
+    setActive(ffSel,'data-ff','e3s'); populateDrives();
+    document.getElementById('nicClientSel').value=String(p.nic);
+    document.getElementById('nicInternodeSel').value=String(p.nic);
+    document.getElementById('cpuSel').value=p.cpu;
+    document.getElementById('ramSel').value=String(p.ram);
+    document.getElementById('autoChk').checked=true; sliderbox.classList.remove('on');
+  }
+  function vendorLabel(v){ return v==='__custom__'? t('vendor_custom') : v; }
+  function populateVendors(){
+    vendorSel.innerHTML=Object.keys(SERVERS).map(function(v){ return '<option value="'+v+'"'+(v===state.vendor?' selected':'')+'>'+vendorLabel(v)+'</option>'; }).join('');
+  }
+  function populateModels(){
+    var list=SERVERS[state.vendor]||[];
+    if(state.vendor==='__custom__'){
+      modelSel.innerHTML='<option>'+t('model_custom')+'</option>';
+      modelSel.disabled=true; ffSel.style.display='none'; bayCustomWrap.style.display='flex'; applyBays();
+    } else {
+      modelSel.disabled=false; ffSel.style.display='flex'; bayCustomWrap.style.display='none';
+      if(!list.some(function(s){return s.m===state.model;})) state.model=list[0].m;
+      modelSel.innerHTML=list.map(function(s){ return '<option value="'+s.m+'"'+(s.m===state.model?' selected':'')+'>'+s.m+' · E3.S '+s.e3s+' / LFF '+s.lff+'</option>'; }).join('');
+      modelSel.value=state.model; applyBays();
+    }
+  }
+  vendorSel.addEventListener('change',function(){
+    state.vendor=this.value; var list=SERVERS[state.vendor]||[];
+    if(state.vendor!=='__custom__' && list.length) state.model=list[0].m;
+    populateModels(); render();
+  });
+  modelSel.addEventListener('change',function(){ state.model=this.value; applyBays(); render(); });
+  ffSel.addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b)return; state.ff=b.getAttribute('data-ff'); setActive(this,'data-ff',state.ff); populateDrives(); applyBays(); render(); });
+  document.getElementById('bayCustom').addEventListener('input',function(){ var v=parseInt(this.value); if(v>=4){state.bays=v;render();} });
+
+  var sliderbox=document.getElementById('sliderbox');
+  document.getElementById('autoChk').addEventListener('change',function(){ state.auto=this.checked; sliderbox.classList.toggle('on',!state.auto); render(); });
+  sliderbox.classList.remove('on');
+  document.getElementById('nodeSeg').addEventListener('click',function(e){
+    var b=e.target.closest('button'); if(!b||state.auto)return;
+    state.N=parseInt(b.getAttribute('data-n'));
+    var m=ecParams(state.ec).K/state.N; if(state.D%m!==0) state.D=Math.round(state.D/m)*m; render();
+  });
+  document.getElementById('dRange').addEventListener('input',function(){
+    if(state.auto)return; var m=ecParams(state.ec).K/state.N;
+    var v=Math.round(parseInt(this.value)/m)*m; if(v<firstValidD(m))v=firstValidD(m);
+    state.D=v; document.getElementById('dVal').textContent=v; render();
+  });
+
+  var toastEl=document.getElementById('toast'), toastT;
+  function toast(msg){ toastEl.textContent=msg; toastEl.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(function(){toastEl.classList.remove('show');},1800); }
+  function bomCSV(){
+    var rows=[]; document.getElementById('bom').querySelectorAll('tr').forEach(function(tr){
+      var cells=[]; tr.querySelectorAll('th,td').forEach(function(c){ var x=(c.textContent||'').trim().replace(/\s+/g,' '); if(/[",\n]/.test(x)) x='"'+x.replace(/"/g,'""')+'"'; cells.push(x); });
+      if(cells.length) rows.push(cells.join(','));
+    });
+    return rows.join('\r\n');
+  }
+  document.getElementById('copyBom').addEventListener('click',function(){
+    var csv=bomCSV();
+    function fb(){ var ta=document.createElement('textarea'); ta.value=csv; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.focus(); ta.select(); try{document.execCommand('copy');toast(t('toast_copied'));}catch(e){toast(t('toast_copyfail'));} document.body.removeChild(ta); }
+    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(csv).then(function(){toast(t('toast_copied'));},fb); } else fb();
+  });
+  document.getElementById('printBom').addEventListener('click',function(){
+    var w=null; try{ w=window.open('','_blank'); }catch(e){}
+    if(!w){ try{ window.print(); }catch(e2){} toast(t('print_hint')); return; }
+    var css=''; document.querySelectorAll('style').forEach(function(s){ css+=s.textContent; });
+    var logo=document.querySelector('.aistor-logo').outerHTML;
+    var results=document.querySelector('.results').innerHTML;
+    var doc='<!doctype html><html lang="'+state.lang+'" data-theme="light"><head><meta charset="utf-8"><title>'+t('doc_title')+'</title>'+
+      '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">'+
+      '<style>'+css+' body{background:#fff} .prthead{display:flex;align-items:center;gap:12px;margin-bottom:18px} .prthead h1{font-size:20px;margin:0} .cardtools,.tabbar{display:none!important}</style></head>'+
+      '<body><div class="wrap"><div class="prthead">'+logo+'<h1>'+t('h1')+'</h1></div><div class="results">'+results+'</div></div>'+
+      '<scr'+'ipt>window.onload=function(){setTimeout(function(){window.focus();window.print();},450);};<\/scr'+'ipt></body></html>';
+    w.document.open(); w.document.write(doc); w.document.close();
+  });
+
+  document.getElementById('diagTabs').addEventListener('click',function(e){
+    var b=e.target.closest('button'); if(!b)return;
+    var tab=b.getAttribute('data-tab');
+    this.querySelectorAll('button').forEach(function(x){x.classList.toggle('active',x===b);});
+    document.getElementById('pane-topo').hidden=(tab!=='topo');
+    document.getElementById('pane-ec').hidden=(tab!=='ec');
+  });
+
+  // init
+  setActive(presets,'data-tb',400);
+  applyStatic();
+  populateVendors(); populateModels(); populateDrives();
+  render();
+})();
+</script>
