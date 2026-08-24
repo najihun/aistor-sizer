@@ -56,6 +56,16 @@
   .howto .step b{display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:700;flex:none}
   .howto .arw{color:var(--faint);font-weight:600}
 
+  .philosophy{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);margin-bottom:22px;overflow:hidden}
+  .philosophy>summary{cursor:pointer;padding:14px 20px;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);list-style:none;display:flex;align-items:center;gap:9px}
+  .philosophy>summary::-webkit-details-marker{display:none}
+  .philosophy>summary::before{content:"▸";color:var(--accent);display:inline-block;transition:transform .15s}
+  .philosophy[open]>summary::before{transform:rotate(90deg)}
+  .philosophy .pbody{padding:0 22px 18px}
+  .philosophy ol{margin:0;padding-left:20px;color:var(--muted);font-size:13px;line-height:1.7}
+  .philosophy li{margin-bottom:9px}
+  .philosophy b{color:var(--text)}
+
   .app{display:grid;grid-template-columns:340px 1fr;gap:22px;align-items:start}
   @media (max-width:900px){.app{grid-template-columns:1fr}}
   .panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow)}
@@ -229,6 +239,21 @@
     <span class="arw">→</span>
     <span class="step"><b>③</b> <span data-i18n="howto3"></span></span>
   </div>
+
+  <details class="philosophy">
+    <summary data-i18n="phil_title"></summary>
+    <div class="pbody">
+      <ol>
+        <li data-i18n-html="phil1"></li>
+        <li data-i18n-html="phil2"></li>
+        <li data-i18n-html="phil3"></li>
+        <li data-i18n-html="phil4"></li>
+        <li data-i18n-html="phil5"></li>
+        <li data-i18n-html="phil6"></li>
+        <li data-i18n-html="phil7"></li>
+      </ol>
+    </div>
+  </details>
 
   <div class="app">
     <aside class="panel">
@@ -465,6 +490,14 @@
       h1:"클러스터 하드웨어 사이저",
       sub:"목표 용량을 선택하면 노드 구성 · 스펙 · 내구성 · 네트워크 · BOM · 토폴로지를 자동 산출합니다",
       howto1:"용량 · EC 선택", howto2:"서버 · 드라이브 · CPU · 메모리 · 네트워크 조정", howto3:"결과 · BOM 확인 후 CSV / PDF 내보내기",
+      phil_title:"산정 사상 · 설계 원칙",
+      phil1:"<b>AI-네이티브 고성능 프라이머리 스토리지</b> — 콜드/아카이브가 아닌 활성 데이터용. 기본은 <b>NVMe(E3.S)</b>이며 HDD는 운영 비권장.",
+      phil2:"<b>EC 8:3 완전 대칭</b> — 데이터5/패리티3(≈63% 가용). 노드 수 N은 EC 크기 K의 약수, 노드당 드라이브는 K/N의 배수, <b>노드·드라이브 모두 짝수</b>로 강제 → 예측 가능하고 균형 잡힌 분산.",
+      phil3:"<b>노드 수 최소 · 드라이브 밀도 최대</b> — 풋프린트·비용을 낮추는 방향으로 산정. 단 <b>1PB(Usable) 이상은 8노드</b>를 기본 전제로 해 노드 장애 허용을 확보.",
+      phil4:"<b>CPU는 네트워크에 연동</b> — 코어는 NIC 처리량 상한을 넘으면 낭비. NIC 연동 권장(25→16 · 50→24 · 100→32 · 200→48 · 400→64코어)으로 <b>과스펙을 지양</b>(APAC 눈높이).",
+      phil5:"<b>기본 스펙</b> — 메모리 노드당 256GB+ 권고, OS 부팅 2×960GB NVMe 미러, 네트워크는 <b>2구간(LB↔노드 / 노드 간)</b> 분리·100GbE+ 권장.",
+      phil6:"<b>성능은 이론 상한 추정</b> — 읽기=min(네트워크, 드라이브 합계), 쓰기=min(네트워크, 드라이브×EC효율). 실측은 <b>WARP 벤치마크</b>로 검증.",
+      phil7:"<b>사전 제안 가이드</b> — 확정 구성·견적은 워크로드(처리량·동시성·객체 크기)에 맞춰 MinIO 세일즈/SE 검토 권장.",
       cap_title:"목표 용량", mode_usable_hint:"Usable 기준", mode_raw_hint:"Raw 기준", cap_ph:"직접 입력",
       seg_usable:"Usable(가용)", seg_raw:"Raw(원시)",
       perf_title:"성능 목표", perf_hint:"읽기 GB/s · 선택", perf_ph:"예: 100 (비우면 용량 기준)",
@@ -542,6 +575,14 @@
       h1:"Cluster Hardware Sizer",
       sub:"Pick a target capacity and it derives node layout · spec · durability · network · BOM · topology automatically",
       howto1:"Pick capacity · EC", howto2:"Adjust server · drive · CPU · memory · network", howto3:"Review results · BOM, export CSV / PDF",
+      phil_title:"Sizing Philosophy · Design Principles",
+      phil1:"<b>AI-native high-performance primary storage</b> — for active data, not cold/archive. Default is <b>NVMe (E3.S)</b>; HDD is not recommended for production.",
+      phil2:"<b>EC 8:3, fully symmetric</b> — data5/parity3 (≈63% usable). Node count N divides EC size K, drives/node is a multiple of K/N, and <b>both nodes and drives are forced even</b> → predictable, balanced distribution.",
+      phil3:"<b>Fewest nodes · maximum drive density</b> — sized to minimize footprint and cost. Above <b>1PB (usable) the base premise is 8 nodes</b> to preserve node-level fault tolerance.",
+      phil4:"<b>CPU tracks the network</b> — cores beyond the NIC throughput ceiling are wasted. NIC-linked cores (25→16 · 50→24 · 100→32 · 200→48 · 400→64) <b>avoid over-spec</b> (APAC-right-sized).",
+      phil5:"<b>Baseline spec</b> — 256GB+ RAM/node recommended, OS boot 2×960GB NVMe mirror, network split into <b>2 segments (LB↔nodes / inter-node)</b>, 100GbE+ recommended.",
+      phil6:"<b>Performance is a theoretical ceiling</b> — read = min(network, drive aggregate), write = min(network, drive×EC efficiency). Validate with a <b>WARP benchmark</b>.",
+      phil7:"<b>Pre-sales guide</b> — confirm final config/quote with MinIO Sales/SE against the actual workload (throughput, concurrency, object size).",
       cap_title:"Target Capacity", mode_usable_hint:"Usable basis", mode_raw_hint:"Raw basis", cap_ph:"Custom",
       seg_usable:"Usable", seg_raw:"Raw",
       perf_title:"Performance Target", perf_hint:"Read GB/s · optional", perf_ph:"e.g. 100 (blank = capacity)",
