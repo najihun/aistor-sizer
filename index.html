@@ -306,6 +306,7 @@
         </div>
         <div class="seg mini" id="ffSel" style="margin-top:8px">
           <button data-ff="e3s" class="active">E3.S · NVMe</button>
+          <button data-ff="sff">SFF · SATA</button>
           <button data-ff="lff">LFF · HDD</button>
         </div>
         <div class="custom" id="bayCustomWrap" style="display:none">
@@ -502,7 +503,7 @@
       seg_usable:"Usable(가용)", seg_raw:"Raw(원시)",
       perf_title:"성능 목표", perf_hint:"읽기 GB/s · 선택", perf_ph:"예: 100 (비우면 용량 기준)",
       ec_title:"EC 구성", ec_hint:"데이터{data} / 패리티{p}", ec_sym:"완전 대칭",
-      drive_title:"드라이브", drive_hint_nvme:"NVMe (E3.S)", drive_hint_hdd:"HDD · 운영 비권장",
+      drive_title:"드라이브", drive_hint_nvme:"NVMe (E3.S)", drive_hint_ssd:"SATA SSD · 차선", drive_hint_hdd:"HDD · 운영 비권장",
       srv_title:"서버 (벤더 · 모델)", srv_hint:"베이 자동", bay_ph:"노드당 베이 수 입력",
       nic_title:"네트워크(NIC)", nic_hint:"2-구간 분리", nic_client:"① LB ↔ 노드", nic_internode:"② 노드 간 통신",
       cpu_title:"노드당 CPU", cpu_opt:"{s}소켓 · {c}코어",
@@ -517,7 +518,7 @@
       h_nodespec:"노드당 권장 스펙", h_tol:"내구성 (Fault Tolerance)",
       tol_disc:"균등 분산(각 Erasure Set을 전 노드에 분배)을 가정한 근사치입니다. 정확한 값은 공식 EC 계산기로 확인하세요.",
       h_net:"네트워크 구성 (2-구간 권장)", h_perf:"성능 추정 (BOM 기반)", h_bom:"구성 요약 (BOM)",
-      perf_disc:"이론 상한 추정입니다 — 읽기=min(네트워크 N×NIC, 드라이브 합계), 쓰기=min(네트워크, 드라이브×EC효율). 실제 성능은 객체 크기·동시성·튜닝에 좌우되며 <b>WARP 벤치마크</b>로 검증하세요. 드라이브당 가정: NVMe 5.0/2.5 GB/s, HDD 0.25/0.20 GB/s.",
+      perf_disc:"이론 상한 추정입니다 — 읽기=min(네트워크 N×NIC, 드라이브 합계), 쓰기=min(네트워크, 드라이브×EC효율). 실제 성능은 객체 크기·동시성·튜닝에 좌우되며 <b>WARP 벤치마크</b>로 검증하세요. 드라이브당 가정: NVMe 5.0/2.5 · SATA SSD 0.5/0.5 · HDD 0.25/0.20 GB/s.",
       btn_copy:"표 복사 (CSV)", btn_print:"인쇄 / PDF",
       ns_cpu:"CPU", ns_mem:"메모리", ns_drive:"드라이브", ns_bay:"드라이브 베이", ns_os:"OS 드라이브", ns_nic:"NIC", ns_raw:"노드 RAW", ns_conc:"동시 요청/노드",
       cpu_ok:"적정", cpu_low:"권장 미만", cpu_over:"과다·NW상한 초과",
@@ -562,7 +563,7 @@
       note1:"운영 최소 구성: <b>4노드 × 노드당 4드라이브</b> 이상 (권고).",
       note2:"CPU: 공식 권고는 <b>1소켓 · 64코어+</b>(최소 8코어)이나, 코어는 <b>네트워크 처리량 상한을 넘으면 낭비</b>입니다. 본 도구는 NIC 연동 권장(25GbE→16 · 100GbE→32 · 200GbE→48 · 400GbE→64코어)을 제시하며, HDD 노드는 드라이브 병목이라 16코어면 충분합니다.",
       note3:"디스크: <b>NVMe</b> 권장(불가피 시 SSD). HDD 운영은 지속적 장애 사례로 비권장. JBOD + XFS, RAID 미사용.",
-      note4:"<b>드라이브 폼팩터 · 매체</b>: <b>E3.S</b>=NVMe(고밀도 EDSFF), <b>LFF(3.5\")</b>=HDD. E3.S는 NVMe 전용이라 HDD는 꽂을 수 없고, 대용량 HDD는 3.5\"(LFF)에만 들어갑니다. AIStor는 <b>NVMe(E3.S) 권장</b>, HDD는 운영 비권장입니다.",
+      note4:"<b>드라이브 폼팩터 · 매체</b>: <b>E3.S</b>=NVMe(고밀도 EDSFF), <b>SFF(2.5\")</b>=SATA SSD(최대 7.68TB급), <b>LFF(3.5\")</b>=HDD. E3.S는 NVMe 전용, 15.36TB+ SSD·대용량은 NVMe/SAS(U.2/U.3)로만 나옵니다. AIStor 권고 순위: <b>NVMe(E3.S) 우선 → 불가피 시 SSD → HDD 비권장</b>.",
       note5:"목록의 값은 각 모델·폼팩터의 <b>대표 최대 베이 수</b>이며, 실제 주문 구성(전면/중간/후면 케이지 등)에 따라 달라질 수 있으니 스펙시트로 확인하거나 \"직접 입력\"을 사용하세요. 노드당 드라이브는 이 베이 수를 넘지 못합니다.",
       note6:"메모리: 노드당 <b>최소 256GB</b> 권고. 동시처리량 = (0.75 × RAM) / 2MiB.",
       note7:"네트워크: <b>100GbE 이상</b> 권고, 클라이언트↔LB 구간과 노드 간 통신 구간을 분리 관리.",
@@ -587,7 +588,7 @@
       seg_usable:"Usable", seg_raw:"Raw",
       perf_title:"Performance Target", perf_hint:"Read GB/s · optional", perf_ph:"e.g. 100 (blank = capacity)",
       ec_title:"Erasure Coding", ec_hint:"Data {data} / Parity {p}", ec_sym:"fully symmetric",
-      drive_title:"Drive", drive_hint_nvme:"NVMe (E3.S)", drive_hint_hdd:"HDD · not recommended",
+      drive_title:"Drive", drive_hint_nvme:"NVMe (E3.S)", drive_hint_ssd:"SATA SSD · fallback", drive_hint_hdd:"HDD · not recommended",
       srv_title:"Server (Vendor · Model)", srv_hint:"bays auto", bay_ph:"Bays per node",
       nic_title:"Network (NIC)", nic_hint:"2-segment", nic_client:"① LB ↔ Nodes", nic_internode:"② Inter-node",
       cpu_title:"CPU per node", cpu_opt:"{s} socket · {c} cores",
@@ -602,7 +603,7 @@
       h_nodespec:"Recommended Node Spec", h_tol:"Fault Tolerance",
       tol_disc:"Approximate, assuming each Erasure Set is spread evenly across all nodes. Confirm exact values with the official EC calculator.",
       h_net:"Network (2-segment recommended)", h_perf:"Performance Estimate (from BOM)", h_bom:"Bill of Materials (BOM)",
-      perf_disc:"Theoretical ceiling — read = min(network N×NIC, drive aggregate), write = min(network, drive×EC efficiency). Real performance depends on object size, concurrency and tuning; validate with a <b>WARP benchmark</b>. Per-drive assumptions: NVMe 5.0/2.5 GB/s, HDD 0.25/0.20 GB/s.",
+      perf_disc:"Theoretical ceiling — read = min(network N×NIC, drive aggregate), write = min(network, drive×EC efficiency). Real performance depends on object size, concurrency and tuning; validate with a <b>WARP benchmark</b>. Per-drive assumptions: NVMe 5.0/2.5 · SATA SSD 0.5/0.5 · HDD 0.25/0.20 GB/s.",
       btn_copy:"Copy table (CSV)", btn_print:"Print / PDF",
       ns_cpu:"CPU", ns_mem:"Memory", ns_drive:"Drive", ns_bay:"Drive bays", ns_os:"OS Drive", ns_nic:"NIC", ns_raw:"Node RAW", ns_conc:"Concurrent req/node",
       cpu_ok:"OK", cpu_low:"below rec.", cpu_over:"over · exceeds NW",
@@ -647,7 +648,7 @@
       note1:"Minimum production layout: <b>4 nodes × 4 drives/node</b> or more (recommended).",
       note2:"CPU: official guidance is <b>1 socket · 64+ cores</b> (8 min), but cores beyond the <b>network throughput ceiling are wasted</b>. This tool suggests NIC-linked cores (25GbE→16 · 100GbE→32 · 200GbE→48 · 400GbE→64); HDD nodes are drive-bound so 16 cores suffice.",
       note3:"Disks: <b>NVMe</b> recommended (SSD if unavoidable). HDD is discouraged for production due to recurring reliability issues. JBOD + XFS, no RAID.",
-      note4:"<b>Form factor · media</b>: <b>E3.S</b>=NVMe (high-density EDSFF), <b>LFF(3.5\")</b>=HDD. E3.S is NVMe-only (no HDD), and high-capacity HDDs fit only in 3.5\"(LFF). AIStor recommends <b>NVMe (E3.S)</b>; HDD is not recommended for production.",
+      note4:"<b>Form factor · media</b>: <b>E3.S</b>=NVMe (high-density EDSFF), <b>SFF(2.5\")</b>=SATA SSD (up to ~7.68TB), <b>LFF(3.5\")</b>=HDD. E3.S is NVMe-only; 15.36TB+ SSDs and large capacities come only as NVMe/SAS (U.2/U.3). AIStor preference: <b>NVMe (E3.S) first → SSD if needed → HDD not recommended</b>.",
       note5:"Listed values are each model/form-factor's <b>representative maximum bay count</b> and vary by actual order config (front/mid/rear cages) — verify on the spec sheet or use \"Custom\". Drives/node cannot exceed this bay count.",
       note6:"Memory: <b>256GB minimum</b> per node recommended. Concurrency = (0.75 × RAM) / 2MiB.",
       note7:"Network: <b>100GbE+</b> recommended, managing the client↔LB segment and the inter-node segment separately.",
@@ -668,19 +669,19 @@
   // 대표 최대 베이 수(폼팩터별) — 백플레인/주문 구성에 따라 실제값 상이. lff=3.5"(HDD), e3s=E3.S(NVMe)
   var SERVERS={
     'Dell':[
-      {m:'PowerEdge R660 (1U · 16G)',lff:4,e3s:16},
-      {m:'PowerEdge R760 (2U · 16G)',lff:12,e3s:20},
-      {m:'PowerEdge R6625 (1U · 16G AMD)',lff:4,e3s:16},
-      {m:'PowerEdge R7625 (2U · 16G AMD)',lff:12,e3s:20}
+      {m:'PowerEdge R660 (1U · 16G)',lff:4,sff:10,e3s:16},
+      {m:'PowerEdge R760 (2U · 16G)',lff:12,sff:24,e3s:20},
+      {m:'PowerEdge R6625 (1U · 16G AMD)',lff:4,sff:10,e3s:16},
+      {m:'PowerEdge R7625 (2U · 16G AMD)',lff:12,sff:24,e3s:20}
     ],
     'HPE':[
-      {m:'ProLiant DL360 Gen12 (1U)',lff:4,e3s:20},
-      {m:'ProLiant DL380 Gen12 (2U)',lff:12,e3s:36},
-      {m:'ProLiant DL385 Gen11 (2U · AMD)',lff:12,e3s:24}
+      {m:'ProLiant DL360 Gen12 (1U)',lff:4,sff:10,e3s:20},
+      {m:'ProLiant DL380 Gen12 (2U)',lff:12,sff:24,e3s:36},
+      {m:'ProLiant DL385 Gen11 (2U · AMD)',lff:12,sff:24,e3s:24}
     ],
     '__custom__':[]
   };
-  var DRIVES={ e3s:[3.84,7.68,15.36,30.72,61.44], lff:[8,12,16,20,24,30] };
+  var DRIVES={ e3s:[3.84,7.68,15.36,30.72,61.44], sff:[0.96,1.92,3.84,7.68], lff:[8,12,16,20,24,30] };
   // 용량 티어별 기본 구성(APAC 경량, E3.S NVMe) — 선택 시 전체 세팅 후 사용자가 개별 조정
   var PRESETS={
     '100':{drive:15.36,nic:25,cpu:'1|16',ram:256},
@@ -690,9 +691,9 @@
   };
   var CPU_OPTS=[{v:'1|16',s:1,c:16},{v:'1|32',s:1,c:32},{v:'1|64',s:1,c:64},{v:'2|128',s:2,c:128,x:'2×64'}];
   var OS_OPTS=[480,960,1920];
-  function ffMedia(ff){ return ff==='e3s'?'NVMe':'HDD'; }
-  function ffLabel(ff){ return ff==='lff'?'LFF(3.5")':'E3.S'; }
-  var PERF={ e3s:{r:5.0,w:2.5,iops:250000}, lff:{r:0.25,w:0.20,iops:200} };
+  function ffMedia(ff){ return ff==='e3s'?'NVMe':(ff==='sff'?'SSD':'HDD'); }
+  function ffLabel(ff){ return ff==='lff'?'LFF(3.5")':(ff==='sff'?'SFF(2.5")':'E3.S'); }
+  var PERF={ e3s:{r:5.0,w:2.5,iops:250000}, sff:{r:0.5,w:0.5,iops:90000}, lff:{r:0.25,w:0.20,iops:200} };
 
   var state={
     lang:'ko',
@@ -1048,7 +1049,7 @@
     if(list.indexOf(state.drive)<0) state.drive=list[Math.min(2,list.length-1)];
     var media=ffMedia(state.ff);
     document.getElementById('driveSel').innerHTML=list.map(function(x){ return '<option value="'+x+'"'+(x===state.drive?' selected':'')+'>'+x+' TB '+media+'</option>'; }).join('');
-    document.getElementById('driveHint').textContent=(media==='NVMe'?t('drive_hint_nvme'):t('drive_hint_hdd'));
+    document.getElementById('driveHint').textContent=(media==='NVMe'?t('drive_hint_nvme'):(media==='SSD'?t('drive_hint_ssd'):t('drive_hint_hdd')));
   }
   function applyPreset(tb){
     var p=PRESETS[String(tb)]; state.targetTB=tb;
@@ -1077,7 +1078,7 @@
     } else {
       modelSel.disabled=false; ffSel.style.display='flex'; bayCustomWrap.style.display='none';
       if(!list.some(function(s){return s.m===state.model;})) state.model=list[0].m;
-      modelSel.innerHTML=list.map(function(s){ return '<option value="'+s.m+'"'+(s.m===state.model?' selected':'')+'>'+s.m+' · E3.S '+s.e3s+' / LFF '+s.lff+'</option>'; }).join('');
+      modelSel.innerHTML=list.map(function(s){ return '<option value="'+s.m+'"'+(s.m===state.model?' selected':'')+'>'+s.m+' · E3.S '+s.e3s+' / SFF '+s.sff+' / LFF '+s.lff+'</option>'; }).join('');
       modelSel.value=state.model; applyBays();
     }
   }
