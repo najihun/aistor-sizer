@@ -1,3 +1,4 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}</style></head><body>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AIStor Cluster Sizer</title>
@@ -179,6 +180,24 @@
   .ec-cap b{color:var(--text);font-family:var(--mono)}
   .quorum{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
   @media (max-width:640px){.quorum{grid-template-columns:1fr}}
+  .ecsets{margin-top:18px;border-top:1px dashed var(--border);padding-top:14px}
+  .ecsets-title{font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px}
+  .ecsets-sum{font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6}
+  .ecsets-sum b{color:var(--text);font-family:var(--mono)}
+  .ecsets-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
+  .setchip{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;display:flex;align-items:center;gap:9px}
+  .setlbl{font-family:var(--mono);font-size:10.5px;color:var(--muted);flex:none;min-width:38px}
+  .setcells{display:flex;gap:2px;flex-wrap:wrap}
+  .mc{width:11px;height:11px;border-radius:2px;display:inline-block}
+  .mc.d{background:var(--drive)} .mc.p{background:var(--drive-parity)}
+  .setmx-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)}
+  .setmx{border-collapse:collapse;width:100%}
+  .setmx th{font-family:var(--mono);font-size:10.5px;color:var(--muted);font-weight:600;padding:6px 10px;text-align:center;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--surface)}
+  .setmx td{padding:5px 10px;border-bottom:1px dashed var(--border);text-align:center;vertical-align:middle}
+  .setmx tr:last-child td{border-bottom:none}
+  .setmx .setname{font-family:var(--mono);font-size:10.5px;color:var(--text);font-weight:700;text-align:left;white-space:nowrap;border-right:1px solid var(--border);background:var(--surface)}
+  .mcells{display:inline-flex;gap:3px}
+  .ecsets-more{font-size:11px;color:var(--faint);margin-top:8px;text-align:center}
   .qcard{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:13px 14px}
   .qcard .qk{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
   .qcard .qv{font-family:var(--mono);font-size:22px;font-weight:600;margin-top:5px}
@@ -450,6 +469,7 @@
             <span><i style="background:var(--drive-parity)"></i> <span data-i18n="leg_parity2"></span></span>
             <span><i style="background:var(--surface-3);border:1px solid var(--border-strong)"></i> <span data-i18n="leg_nodeb"></span></span>
           </div>
+          <div class="ecsets" id="ecsets"></div>
           <div class="quorum" id="ecquorum"></div>
           <div class="disclaimer" id="ecnote"></div>
         </div>
@@ -558,6 +578,8 @@
       q_write:"쓰기 쿼럼 / 허용 손실", q_write_n:"최대 {w}개 샤드 손실까지 쓰기 유지",
       q_node:"노드 장애 허용", q_node_unit:"노드", q_node_n:"Erasure Set당 노드 최다 {spn}샤드 기준(보장값)",
       ec_note:"EC {ec} = 데이터 {data} / 패리티 {p} (효율 {eff}%). 읽기 쿼럼=데이터 샤드 수, 쓰기 쿼럼=데이터+1. 노드 장애 허용은 각 Erasure Set을 전 노드에 균등 분산한 최악 케이스 보장값입니다.",
+      ec_sets_title:"③ Erasure Set × 노드 배치도 ({sets}개 세트 × {n}노드)",
+      ec_sets_sum:"각 Set은 <b>{n}</b>개 노드에 걸쳐 노드당 <b>{m}</b>드라이브씩 배치됩니다(세트당 데이터 {data}+패리티 {p} = {K}드라이브). 총 <b>{total}</b> 드라이브 = 데이터 <b>{dtot}</b> · 패리티 <b>{ptot}</b> · 가용 <b>{eff}%</b>. <span style='color:var(--drive)'>■</span> 데이터 · <span style='color:var(--drive-parity)'>■</span> 패리티 — 패리티는 세트마다 다른 노드로 로테이션됩니다.",
       toast_copied:"BOM CSV 복사됨", toast_copyfail:"복사 실패 — 수동 선택하세요",
       print_hint:"인쇄가 안 뜨면: 아티팩트를 새 탭에서 열고 브라우저 인쇄(Ctrl/Cmd+P → PDF로 저장)를 사용하세요.",
       note1:"운영 최소 구성: <b>4노드 × 노드당 4드라이브</b> 이상 (권고).",
@@ -643,6 +665,8 @@
       q_write:"Write quorum / loss", q_write_n:"writes survive up to {w} shard loss",
       q_node:"Node fault tolerance", q_node_unit:"nodes", q_node_n:"guaranteed (≤{spn} shards/node per set)",
       ec_note:"EC {ec} = Data {data} / Parity {p} (efficiency {eff}%). Read quorum = data shards, write quorum = data+1. Node tolerance is the worst-case guarantee assuming each Erasure Set is spread evenly across all nodes.",
+      ec_sets_title:"③ Erasure Set × Node map ({sets} sets × {n} nodes)",
+      ec_sets_sum:"Each set spans all <b>{n}</b> nodes with <b>{m}</b> drive(s) per node (data {data}+parity {p} = {K} drives/set). Total <b>{total}</b> drives = data <b>{dtot}</b> · parity <b>{ptot}</b> · usable <b>{eff}%</b>. <span style='color:var(--drive)'>■</span> data · <span style='color:var(--drive-parity)'>■</span> parity — parity rotates to a different node each set.",
       toast_copied:"BOM CSV copied", toast_copyfail:"Copy failed — select manually",
       print_hint:"No print dialog? Open the artifact in its own tab and use browser print (Ctrl/Cmd+P → Save as PDF).",
       note1:"Minimum production layout: <b>4 nodes × 4 drives/node</b> or more (recommended).",
@@ -988,6 +1012,30 @@
       '<div class="qcard write"><div class="qk">'+t('q_write')+'</div><div class="qv">'+(data+1)+' <span style="font-size:13px;color:var(--muted)">'+t('q_need')+'</span></div><div class="qn">'+t('q_write_n',{w:c.writeTol})+'</div></div>'+
       '<div class="qcard node"><div class="qk">'+t('q_node')+'</div><div class="qv">'+c.nodeTol+' <span style="font-size:13px;color:var(--muted)">'+t('q_node_unit')+'</span></div><div class="qn">'+t('q_node_n',{spn:spn})+'</div></div>';
     document.getElementById('ecnote').textContent=t('ec_note',{ec:state.ec,data:data,p:P,eff:Math.round(c.eff*100)});
+
+    // ③ Erasure Set × 노드 배치 매트릭스 (행=Set, 열=Node)
+    var setsN=c.sets, mm=c.m, showN=Math.min(setsN,24);
+    var head='<tr><th></th>';
+    for(var j=0;j<N;j++) head+='<th>Node '+(j+1)+'</th>';
+    head+='</tr>';
+    var body='';
+    for(var s=0;s<showN;s++){
+      body+='<tr><td class="setname">Set '+(s+1)+'</td>';
+      for(var j2=0;j2<N;j2++){
+        var cc='';
+        for(var slot=0;slot<mm;slot++){
+          var pos=j2+N*slot, isP=((pos+s)%K)>=data;   // 패리티는 세트마다 로테이션
+          cc+='<i class="mc '+(isP?'p':'d')+'"></i>';
+        }
+        body+='<td><span class="mcells">'+cc+'</span></td>';
+      }
+      body+='</tr>';
+    }
+    var more = setsN>showN ? '<div class="ecsets-more">+'+(setsN-showN)+' Set …</div>' : '';
+    document.getElementById('ecsets').innerHTML=
+      '<div class="ecsets-title">'+t('ec_sets_title',{sets:setsN,n:N})+'</div>'+
+      '<div class="ecsets-sum">'+t('ec_sets_sum',{total:c.total,sets:setsN,n:N,data:data,p:P,dtot:setsN*data,ptot:setsN*P,eff:Math.round(c.eff*100),m:mm,K:K})+'</div>'+
+      '<div class="setmx-wrap"><table class="setmx"><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>'+more;
   }
 
   // ---------- static i18n + option builders ----------
@@ -1148,3 +1196,5 @@
   render();
 })();
 </script>
+
+</body></html>
