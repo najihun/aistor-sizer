@@ -1,4 +1,3 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}</style></head><body>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AIStor Cluster Sizer</title>
@@ -514,7 +513,7 @@
       phil_title:"산정 사상 · 설계 원칙",
       phil1:"<b>AI-네이티브 고성능 프라이머리 스토리지</b> — 콜드/아카이브가 아닌 활성 데이터용. 기본은 <b>NVMe(E3.S)</b>이며 HDD는 운영 비권장.",
       phil2:"<b>EC 8:3 완전 대칭</b> — 데이터5/패리티3(≈63% 가용). 노드 수 N은 EC 크기 K의 약수, 노드당 드라이브는 K/N의 배수, <b>노드·드라이브 모두 짝수</b>로 강제 → 예측 가능하고 균형 잡힌 분산.",
-      phil3:"<b>노드 수 최소 · 드라이브 밀도 최대</b> — 풋프린트·비용을 낮추는 방향으로 산정. 단 <b>1PB(Usable) 이상은 8노드</b>를 기본 전제로 해 노드 장애 허용을 확보.",
+      phil3:"<b>노드 수 최소 · 드라이브 밀도 최대</b> — 풋프린트·비용을 낮추는 방향으로 산정. 단 <b>400TB(Usable) 이상은 8노드</b>를 기본 전제로 해 노드 장애 허용을 확보.",
       phil4:"<b>CPU는 네트워크에 연동</b> — 코어는 NIC 처리량 상한을 넘으면 낭비. NIC 연동 권장(25→16 · 50→24 · 100→32 · 200→48 · 400→64코어)으로 <b>과스펙을 지양</b>(APAC 눈높이).",
       phil5:"<b>기본 스펙</b> — 메모리 노드당 256GB+ 권고, OS 부팅 2×960GB NVMe 미러, 네트워크는 <b>2구간(LB↔노드 / 노드 간)</b> 분리·100GbE+ 권장.",
       phil6:"<b>성능은 이론 상한 추정</b> — 읽기=min(네트워크, 드라이브 합계), 쓰기=min(네트워크, 드라이브×EC효율). 실측은 <b>WARP 벤치마크</b>로 검증.",
@@ -601,7 +600,7 @@
       phil_title:"Sizing Philosophy · Design Principles",
       phil1:"<b>AI-native high-performance primary storage</b> — for active data, not cold/archive. Default is <b>NVMe (E3.S)</b>; HDD is not recommended for production.",
       phil2:"<b>EC 8:3, fully symmetric</b> — data5/parity3 (≈63% usable). Node count N divides EC size K, drives/node is a multiple of K/N, and <b>both nodes and drives are forced even</b> → predictable, balanced distribution.",
-      phil3:"<b>Fewest nodes · maximum drive density</b> — sized to minimize footprint and cost. Above <b>1PB (usable) the base premise is 8 nodes</b> to preserve node-level fault tolerance.",
+      phil3:"<b>Fewest nodes · maximum drive density</b> — sized to minimize footprint and cost. Above <b>400TB (usable) the base premise is 8 nodes</b> to preserve node-level fault tolerance.",
       phil4:"<b>CPU tracks the network</b> — cores beyond the NIC throughput ceiling are wasted. NIC-linked cores (25→16 · 50→24 · 100→32 · 200→48 · 400→64) <b>avoid over-spec</b> (APAC-right-sized).",
       phil5:"<b>Baseline spec</b> — 256GB+ RAM/node recommended, OS boot 2×960GB NVMe mirror, network split into <b>2 segments (LB↔nodes / inter-node)</b>, 100GbE+ recommended.",
       phil6:"<b>Performance is a theoretical ceiling</b> — read = min(network, drive aggregate), write = min(network, drive×EC efficiency). Validate with a <b>WARP benchmark</b>.",
@@ -703,6 +702,12 @@
       {m:'ProLiant DL380 Gen12 (2U)',lff:12,sff:24,e3s:36},
       {m:'ProLiant DL385 Gen11 (2U · AMD)',lff:12,sff:24,e3s:24}
     ],
+    'Supermicro':[
+      {m:'Petascale ASG-1115S-NE316R (1U · E3.S)',lff:0,sff:0,e3s:16},
+      {m:'Petascale ASG-2115S-NE332R (2U · E3.S)',lff:0,sff:0,e3s:32},
+      {m:'SuperStorage 2U (24×2.5″ · NVMe/SATA)',lff:0,sff:24,e3s:24},
+      {m:'SuperStorage 4U (45×3.5″ · HDD)',lff:45,sff:0,e3s:0}
+    ],
     '__custom__':[]
   };
   var DRIVES={ e3s:[3.84,7.68,15.36,30.72,61.44], sff:[0.96,1.92,3.84,7.68], lff:[8,12,16,20,24,30] };
@@ -750,9 +755,9 @@
     var bays=state.bays, pd=PERF[state.ff]||PERF.e3s, nic=NIC_GBPS[state.nicClient]||0;
     var needCap=Math.ceil(rawNeededTB/driveTB), needPerf=0, minN=4;
     if(state.perfTargetR>0){ needPerf=Math.ceil(state.perfTargetR/pd.r); if(nic>0) minN=Math.max(4,Math.ceil(state.perfTargetR/nic)); }
-    // 1PB(Usable) 이상은 8노드를 기본 전제로 (자동 추천 노드 하한)
+    // 400TB(Usable) 이상은 8노드를 기본 전제로 (자동 추천 노드 하한)
     var usableTarget = state.mode==='usable' ? state.targetTB : state.targetTB*(ecParams(state.ec).data/K);
-    if(usableTarget>=1024) minN=Math.max(minN,8);
+    if(usableTarget>=400) minN=Math.max(minN,8);
     var need=Math.max(needCap,needPerf);
     var vs=validNodeCounts(K); // 오름차순
     // 오름차순 N 중, 베이 한도 내에서 목표를 채울 수 있는 최소 N을 고르고 D는 필요한 최소(짝수/스텝) — 밀도 최대
@@ -1091,7 +1096,13 @@
 
   var vendorSel=document.getElementById('vendorSel'), modelSel=document.getElementById('modelSel'), ffSel=document.getElementById('ffSel'), bayCustomWrap=document.getElementById('bayCustomWrap');
   function currentModel(){ var l=SERVERS[state.vendor]||[]; for(var i=0;i<l.length;i++) if(l[i].m===state.model) return l[i]; return null; }
-  function applyBays(){ if(state.vendor==='__custom__'){ var v=parseInt(document.getElementById('bayCustom').value); if(v>=4)state.bays=v; return; } var cm=currentModel(); if(cm) state.bays=cm[state.ff]||cm.e3s; }
+  function bestFF(cm){ var order=['e3s','sff','lff']; for(var i=0;i<order.length;i++){ if(cm[order[i]]>0) return order[i]; } return 'e3s'; }
+  function applyBays(){
+    if(state.vendor==='__custom__'){ var v=parseInt(document.getElementById('bayCustom').value); if(v>=4)state.bays=v; return; }
+    var cm=currentModel(); if(!cm) return;
+    if(!(cm[state.ff]>0)){ state.ff=bestFF(cm); setActive(ffSel,'data-ff',state.ff); populateDrives(); }  // 모델이 해당 폼팩터 미지원 → 지원 폼팩터로 자동 전환
+    state.bays=cm[state.ff]||4;
+  }
   function populateDrives(){
     var list=DRIVES[state.ff]||DRIVES.e3s;
     if(list.indexOf(state.drive)<0) state.drive=list[Math.min(2,list.length-1)];
@@ -1126,7 +1137,7 @@
     } else {
       modelSel.disabled=false; ffSel.style.display='flex'; bayCustomWrap.style.display='none';
       if(!list.some(function(s){return s.m===state.model;})) state.model=list[0].m;
-      modelSel.innerHTML=list.map(function(s){ return '<option value="'+s.m+'"'+(s.m===state.model?' selected':'')+'>'+s.m+' · E3.S '+s.e3s+' / SFF '+s.sff+' / LFF '+s.lff+'</option>'; }).join('');
+      modelSel.innerHTML=list.map(function(s){ var ev=s.m.replace(/"/g,'&quot;'); return '<option value="'+ev+'"'+(s.m===state.model?' selected':'')+'>'+s.m+' · E3.S '+s.e3s+' / SFF '+s.sff+' / LFF '+s.lff+'</option>'; }).join('');
       modelSel.value=state.model; applyBays();
     }
   }
@@ -1196,5 +1207,3 @@
   render();
 })();
 </script>
-
-</body></html>
