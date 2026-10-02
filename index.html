@@ -1029,7 +1029,7 @@
       for(var j2=0;j2<N;j2++){
         var cc='';
         for(var slot=0;slot<mm;slot++){
-          var pos=j2+N*slot, isP=((pos+s)%K)>=data;   // 패리티는 세트마다 로테이션
+          var pos=j2+N*slot, isP=((((pos-s*P)%K)+K)%K)<P;   // 패리티를 세트마다 P칸씩 로테이션 → 노드별 균등 분산(실제 MinIO는 객체마다 로테이션)
           cc+='<i class="mc '+(isP?'p':'d')+'"></i>';
         }
         body+='<td><span class="mcells">'+cc+'</span></td>';
